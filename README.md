@@ -44,6 +44,8 @@ python -m src.bot.main
 5. Для сохранения SQLite-кэша между рестартами добавь Railway Volume и примонтируй его в `/app/data`.
 6. Запусти deploy. Бот работает в polling mode, публичный HTTP endpoint не нужен.
 
+`.dockerignore` исключает локальный `.env`, git metadata, кэши и временные файлы из Docker/Railway build context.
+
 ## Переменные окружения
 
 - `BOT_TOKEN`: обязательный токен Telegram Bot API.
