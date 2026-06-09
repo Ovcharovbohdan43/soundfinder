@@ -39,7 +39,7 @@ python -m src.bot.main
 3. Railway автоматически использует `Dockerfile` через `railway.json`.
 4. В Variables добавь минимум:
    - `BOT_TOKEN`
-   - `YT_DLP_COOKIES_B64` (обязательно для Railway, иначе YouTube блокирует скачивание)
+   - `YT_DLP_COOKIES_B64_1`, `YT_DLP_COOKIES_B64_2`, ... (обязательно для Railway, иначе YouTube блокирует скачивание)
    - `LOG_LEVEL=INFO`
    - `PREFERRED_AUDIO_CODEC=mp3`
 5. Для сохранения SQLite-кэша между рестартами добавь Railway Volume и примонтируй его в `/app/data`.
@@ -61,7 +61,8 @@ python -m src.bot.main
 - `DATA_DIR`, `TMP_DIR`, `CACHE_DB_PATH`: пути хранения кэша и временных файлов.
 - `PREFERRED_AUDIO_CODEC`: `mp3` или `m4a`.
 - `YTDLP_SOCKET_TIMEOUT`: timeout сетевых операций downloader-а.
-- `YT_DLP_COOKIES_B64`: base64 cookies YouTube для облачного деплоя.
+- `YT_DLP_COOKIES_B64`: base64 cookies YouTube для локального/небольшого значения.
+- `YT_DLP_COOKIES_B64_1`, `YT_DLP_COOKIES_B64_2`, ...: chunked base64 cookies для Railway.
 - `YT_DLP_COOKIES_FILE`: путь к cookies-файлу вместо base64.
 - `YT_DLP_PROXY`: опциональный HTTP/SOCKS proxy.
 - `YT_DLP_PLAYER_CLIENTS`: список YouTube client-ов через запятую.

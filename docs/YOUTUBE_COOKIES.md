@@ -18,27 +18,35 @@ YouTube часто блокирует скачивание с datacenter IP (Rai
 
 ## Как закодировать cookies в base64
 
-PowerShell:
+Railway ограничивает длину одной переменной. Поэтому для больших cookies используй numbered chunks:
+
+```powershell
+$path = "cookies.txt"
+$chunkSize = 30000
+$encoded = [Convert]::ToBase64String([IO.File]::ReadAllBytes($path))
+$chunks = [regex]::Matches($encoded, ".{1,$chunkSize}") | ForEach-Object { $_.Value }
+for ($i = 0; $i -lt $chunks.Count; $i++) {
+  "YT_DLP_COOKIES_B64_$($i + 1)=$($chunks[$i])"
+}
+```
+
+Если файл маленький и Railway не ругается на лимит, можно использовать одну переменную:
 
 ```powershell
 [Convert]::ToBase64String([IO.File]::ReadAllBytes("cookies.txt")) | Set-Clipboard
-```
-
-Python:
-
-```powershell
-py -c "import base64, pathlib; print(base64.b64encode(pathlib.Path('cookies.txt').read_bytes()).decode())"
 ```
 
 ## Как добавить в Railway
 
 1. Открой сервис бота в Railway.
 2. Перейди в `Variables`.
-3. Создай переменную `YT_DLP_COOKIES_B64`.
-4. Вставь base64-строку целиком, без переносов.
+3. Создай переменные `YT_DLP_COOKIES_B64_1`, `YT_DLP_COOKIES_B64_2`, `YT_DLP_COOKIES_B64_3` и так далее.
+4. Вставь в каждую переменную соответствующий chunk.
 5. Redeploy сервис.
 
 Бот при старте запишет cookies в `/app/data/youtube_cookies.txt`.
+
+Важно: номера должны идти подряд, без пропусков. Например, если есть `_1`, `_2`, `_4`, бот остановится с ошибкой конфигурации.
 
 ## Альтернатива: файл на volume
 

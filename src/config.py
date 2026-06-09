@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,6 +35,38 @@ def _parse_player_clients(raw_value: str | None) -> tuple[str, ...]:
     if not clients:
         raise ConfigError("YT_DLP_PLAYER_CLIENTS must contain at least one client")
     return clients
+
+
+def _get_ytdlp_cookies_b64() -> str | None:
+    direct_value = os.getenv("YT_DLP_COOKIES_B64", "").strip()
+    if direct_value:
+        return direct_value
+
+    chunks: list[tuple[int, str]] = []
+    pattern = re.compile(r"^YT_DLP_COOKIES_B64_(\d+)$")
+    for name, value in os.environ.items():
+        match = pattern.match(name)
+        if match is None:
+            continue
+
+        chunk = value.strip()
+        if not chunk:
+            raise ConfigError(f"{name} is empty")
+        chunks.append((int(match.group(1)), chunk))
+
+    if not chunks:
+        return None
+
+    chunks.sort(key=lambda item: item[0])
+    expected_indexes = list(range(1, len(chunks) + 1))
+    actual_indexes = [index for index, _ in chunks]
+    if actual_indexes != expected_indexes:
+        raise ConfigError(
+            "YT_DLP_COOKIES_B64 chunks must be sequential: "
+            f"expected {expected_indexes}, got {actual_indexes}"
+        )
+
+    return "".join(chunk for _, chunk in chunks)
 
 
 @dataclass(frozen=True)
@@ -91,7 +124,7 @@ def load_settings() -> Settings:
         preferred_audio_codec=preferred_audio_codec,
         ytdlp_socket_timeout=_get_int("YTDLP_SOCKET_TIMEOUT", 20, minimum=5),
         ytdlp_cookies_file=os.getenv("YT_DLP_COOKIES_FILE", "").strip() or None,
-        ytdlp_cookies_b64=os.getenv("YT_DLP_COOKIES_B64", "").strip() or None,
+        ytdlp_cookies_b64=_get_ytdlp_cookies_b64(),
         ytdlp_proxy=os.getenv("YT_DLP_PROXY", "").strip() or None,
         ytdlp_player_clients=_parse_player_clients(os.getenv("YT_DLP_PLAYER_CLIENTS")),
     )
