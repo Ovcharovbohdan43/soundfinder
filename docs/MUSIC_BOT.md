@@ -70,6 +70,7 @@ Manual e2e:
 
 ## Ограничения
 
+- На Railway YouTube часто блокирует datacenter IP. Для скачивания нужны cookies: см. [YOUTUBE_COOKIES.md](YOUTUBE_COOKIES.md).
 - Telegram audio upload limit: до 50 MB, в конфиге по умолчанию 49 MB.
 - Поддерживаемые форматы отправки: `.mp3` и `.m4a`.
 - Railway filesystem может быть эфемерным; для постоянного SQLite-кэша нужен Volume на `/app/data`.

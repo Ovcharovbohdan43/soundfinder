@@ -4,6 +4,7 @@ __pycache__/
 .ruff_cache/
 *.pyc
 data/*.sqlite3
+data/youtube_cookies.txt
 tmp/*
 !tmp/.gitkeep
 !data/.gitkeep

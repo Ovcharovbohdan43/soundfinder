@@ -8,7 +8,7 @@ from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, Inli
 
 from src.config import Settings
 from src.infrastructure.rate_limit import RateLimitExceeded
-from src.infrastructure.yt_dlp_client import YtDlpError
+from src.infrastructure.yt_dlp_client import YtDlpBotBlockedError, YtDlpError
 from src.models import SearchResult
 from src.services.container import AppServices
 from src.services.download_service import AudioDurationError, AudioTooLargeError
@@ -141,6 +141,14 @@ async def select_track_handler(
         )
     except AudioDurationError:
         await _send_error(callback, "Трек слишком длинный для настроек бота.")
+    except YtDlpBotBlockedError:
+        logger.exception("YouTube blocked download from server IP")
+        await _send_error(
+            callback,
+            "YouTube заблокировал скачивание с сервера Railway.\n\n"
+            "Нужно добавить cookies YouTube в Railway variable `YT_DLP_COOKIES_B64`.\n"
+            "Инструкция: docs/YOUTUBE_COOKIES.md",
+        )
     except YtDlpError:
         logger.exception("Download provider failed")
         await _send_error(callback, "Не удалось скачать этот трек. Попробуй другой результат.")

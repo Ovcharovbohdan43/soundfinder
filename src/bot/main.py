@@ -13,6 +13,7 @@ from src.config import ConfigError, Settings, load_settings
 from src.infrastructure.audio_cache import AudioCache
 from src.infrastructure.rate_limit import DownloadLimiter
 from src.infrastructure.session_store import SearchSessionStore
+from src.infrastructure.youtube_cookies import prepare_youtube_cookies
 from src.infrastructure.yt_dlp_client import YtDlpClient
 from src.services.container import AppServices
 from src.services.download_service import DownloadService
@@ -31,7 +32,23 @@ async def build_services(settings: Settings) -> AppServices:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     settings.tmp_dir.mkdir(parents=True, exist_ok=True)
 
-    yt_dlp_client = YtDlpClient(socket_timeout=settings.ytdlp_socket_timeout)
+    cookies_path = prepare_youtube_cookies(
+        data_dir=settings.data_dir,
+        cookies_file=settings.ytdlp_cookies_file,
+        cookies_b64=settings.ytdlp_cookies_b64,
+    )
+    if cookies_path is None:
+        logging.getLogger(__name__).warning(
+            "YouTube cookies are not configured. Downloads from Railway/datacenter IPs "
+            "usually fail until YT_DLP_COOKIES_B64 is set."
+        )
+
+    yt_dlp_client = YtDlpClient(
+        socket_timeout=settings.ytdlp_socket_timeout,
+        cookies_path=cookies_path,
+        proxy=settings.ytdlp_proxy,
+        player_clients=settings.ytdlp_player_clients,
+    )
     cache = AudioCache(settings.cache_db_path)
     await cache.init()
 

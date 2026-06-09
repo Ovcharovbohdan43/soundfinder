@@ -26,6 +26,10 @@ def make_settings(tmp_path: Path) -> Settings:
         cache_db_path=tmp_path / "data" / "cache.sqlite3",
         preferred_audio_codec="mp3",
         ytdlp_socket_timeout=20,
+        ytdlp_cookies_file=None,
+        ytdlp_cookies_b64=None,
+        ytdlp_proxy=None,
+        ytdlp_player_clients=("android_vr", "tv_embedded", "web_safari"),
     )
 
 

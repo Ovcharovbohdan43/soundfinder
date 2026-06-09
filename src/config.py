@@ -26,6 +26,16 @@ def _get_int(name: str, default: int, *, minimum: int | None = None) -> int:
     return value
 
 
+def _parse_player_clients(raw_value: str | None) -> tuple[str, ...]:
+    if not raw_value:
+        return ("android_vr", "tv_embedded", "web_safari")
+
+    clients = tuple(client.strip() for client in raw_value.split(",") if client.strip())
+    if not clients:
+        raise ConfigError("YT_DLP_PLAYER_CLIENTS must contain at least one client")
+    return clients
+
+
 @dataclass(frozen=True)
 class Settings:
     bot_token: str
@@ -41,6 +51,10 @@ class Settings:
     cache_db_path: Path
     preferred_audio_codec: str
     ytdlp_socket_timeout: int
+    ytdlp_cookies_file: str | None
+    ytdlp_cookies_b64: str | None
+    ytdlp_proxy: str | None
+    ytdlp_player_clients: tuple[str, ...]
 
     @property
     def telegram_max_audio_bytes(self) -> int:
@@ -76,4 +90,8 @@ def load_settings() -> Settings:
         cache_db_path=cache_db_path,
         preferred_audio_codec=preferred_audio_codec,
         ytdlp_socket_timeout=_get_int("YTDLP_SOCKET_TIMEOUT", 20, minimum=5),
+        ytdlp_cookies_file=os.getenv("YT_DLP_COOKIES_FILE", "").strip() or None,
+        ytdlp_cookies_b64=os.getenv("YT_DLP_COOKIES_B64", "").strip() or None,
+        ytdlp_proxy=os.getenv("YT_DLP_PROXY", "").strip() or None,
+        ytdlp_player_clients=_parse_player_clients(os.getenv("YT_DLP_PLAYER_CLIENTS")),
     )
