@@ -39,6 +39,34 @@ def test_parse_tracks_from_nested_imusic_html() -> None:
     assert tracks[0].duration == 128
 
 
+def test_sanitize_removes_known_site_suffix_without_cutting_track_name() -> None:
+    client = IMusicClient(base_url="https://two.imusic.fm/", timeout=3)
+    html = """
+    <li class="track" data-duration="128000" data-mp3="/public/play_mp3.php?id=321">
+      <h2 class="playlist-name"><a href="/song/321">Yakaya - Припинда muzkach net</a></h2>
+    </li>
+    """
+
+    tracks = client._parse_tracks(html)  # noqa: SLF001
+
+    assert tracks[0].artist == "Yakaya"
+    assert tracks[0].title == "Припинда"
+
+
+def test_sanitize_keeps_legitimate_track_metadata() -> None:
+    client = IMusicClient(base_url="https://two.imusic.fm/", timeout=3)
+    html = """
+    <li class="track" data-duration="128000" data-mp3="/public/play_mp3.php?id=321">
+      <h2 class="playlist-name"><a href="/song/321">Artist - Track Name (Remix) net worth</a></h2>
+    </li>
+    """
+
+    tracks = client._parse_tracks(html)  # noqa: SLF001
+
+    assert tracks[0].artist == "Artist"
+    assert tracks[0].title == "Track Name (Remix) net worth"
+
+
 def test_parse_tracks_rejects_external_download_host() -> None:
     client = IMusicClient(base_url="https://two.imusic.fm/", timeout=3)
     html = """

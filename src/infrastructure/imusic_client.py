@@ -12,6 +12,12 @@ from urllib.parse import quote, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
+SITE_TAG_PATTERNS = (
+    r"\bmuzkach(?:\s+net|\.net)?\b",
+    r"\btwo\.imusic\.fm\b",
+    r"\bimusic\.fm\b",
+    r"\bimusic\b",
+)
 
 
 class IMusicError(RuntimeError):
@@ -124,8 +130,11 @@ class IMusicClient:
                 continue
 
             artist, title = self._extract_track_name(item, attrs)
+            artist = self._sanitize_track_text(artist)
+            title = self._sanitize_track_text(title)
             if not title:
                 title = self._extract_visible_text(item) or "Unknown track"
+                title = self._sanitize_track_text(title) or "Unknown track"
 
             tracks.append(
                 IMusicTrack(
@@ -219,6 +228,22 @@ class IMusicClient:
             return None
         cleaned = html.unescape(value)
         cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned or None
+
+    @classmethod
+    def _sanitize_track_text(cls, value: str | None) -> str | None:
+        cleaned = cls._clean_text(value)
+        if not cleaned:
+            return None
+
+        for pattern in SITE_TAG_PATTERNS:
+            cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+
+        cleaned = re.sub(r"\s+([)\],.!?])", r"\1", cleaned)
+        cleaned = re.sub(r"([(])\s+", r"\1", cleaned)
+        cleaned = re.sub(r"\s*[-–—]+\s*$", "", cleaned)
+        cleaned = re.sub(r"^\s*[-–—]+\s*", "", cleaned)
+        cleaned = re.sub(r"\s{2,}", " ", cleaned).strip(" -–—\t\r\n")
         return cleaned or None
 
     @staticmethod
