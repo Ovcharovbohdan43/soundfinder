@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
+from pathlib import Path
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
@@ -29,7 +30,7 @@ def setup_logging(settings: Settings) -> None:
     )
 
 
-async def build_services(settings: Settings) -> AppServices:
+async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     settings.tmp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,7 +60,7 @@ async def build_services(settings: Settings) -> AppServices:
     cache = AudioCache(settings.cache_db_path)
     await cache.init()
 
-    return AppServices(
+    services = AppServices(
         search=SearchService(client=yt_dlp_client, settings=settings),
         download=DownloadService(
             client=yt_dlp_client,
@@ -73,6 +74,7 @@ async def build_services(settings: Settings) -> AppServices:
         ),
         sessions=SearchSessionStore(),
     )
+    return services, cookies_path
 
 
 async def main() -> None:
@@ -83,7 +85,7 @@ async def main() -> None:
         raise SystemExit(1) from exc
 
     setup_logging(settings)
-    services = await build_services(settings)
+    services, cookies_path = await build_services(settings)
 
     bot = Bot(
         token=settings.bot_token,
