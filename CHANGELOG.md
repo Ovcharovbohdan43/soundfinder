@@ -1,5 +1,9 @@
 # Changelog
 
+[2026-06-10] - Исправлено: add a single-instance polling lock, limit Railway to one replica, tune aiogram polling concurrency, and lower iMusic timeout to reduce Telegram conflicts and hangs.
+
+[2026-06-10] - Изменено: YouTube search is disabled by default when iMusic is enabled (`YOUTUBE_SEARCH_ENABLED=false`), so Railway no longer hits YouTube on empty iMusic results or search failures.
+
 [2026-06-10] - Исправлено: remove known source-site tags like `muzkach net` from iMusic artist/title metadata without trimming legitimate track details.
 
 [2026-06-10] - Исправлено: parse real artist and track titles from nested iMusic HTML instead of showing the generic fallback title.

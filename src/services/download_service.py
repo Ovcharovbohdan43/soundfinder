@@ -30,7 +30,7 @@ class DownloadService:
     def __init__(
         self,
         *,
-        client: YtDlpClient,
+        client: YtDlpClient | None,
         settings: Settings,
         imusic_client: IMusicClient | None = None,
     ) -> None:
@@ -48,6 +48,9 @@ class DownloadService:
         try:
             if self._imusic_client is not None:
                 return await self._download_from_imusic(result, work_dir)
+
+            if self._client is None:
+                raise DownloadFallbackError("No download provider configured")
 
             try:
                 audio_path = await asyncio.to_thread(

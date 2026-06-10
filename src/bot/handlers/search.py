@@ -8,11 +8,10 @@ from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, Inli
 
 from src.config import Settings
 from src.infrastructure.rate_limit import RateLimitExceeded
-from src.infrastructure.yt_dlp_client import YtDlpBotBlockedError, YtDlpError
 from src.models import SearchResult
 from src.services.container import AppServices
 from src.services.download_service import AudioDurationError, AudioTooLargeError, DownloadFallbackError
-from src.services.search_service import SearchValidationError
+from src.services.search_service import SearchProviderError, SearchValidationError
 
 router = Router()
 logger = logging.getLogger(__name__)
@@ -64,7 +63,7 @@ async def search_handler(message: Message, services: AppServices, settings: Sett
     except SearchValidationError as exc:
         await status_message.edit_text(str(exc))
         return
-    except YtDlpError:
+    except SearchProviderError:
         logger.exception("Search provider failed")
         await status_message.edit_text("Не удалось выполнить поиск. Попробуй другой запрос позже.")
         return
@@ -148,12 +147,6 @@ async def select_track_handler(
             callback,
             "Не удалось скачать этот трек. Попробуй другой результат или другой запрос.",
         )
-    except YtDlpBotBlockedError:
-        logger.exception("YouTube blocked download from server IP")
-        await _send_error(callback, "Не удалось скачать этот трек. Попробуй другой результат.")
-    except YtDlpError:
-        logger.exception("Download provider failed")
-        await _send_error(callback, "Не удалось скачать этот трек. Попробуй другой результат.")
     except Exception:
         logger.exception("Unexpected download failure")
         await _send_error(callback, "Произошла ошибка при обработке трека.")

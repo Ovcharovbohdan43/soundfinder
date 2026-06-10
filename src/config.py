@@ -114,6 +114,11 @@ class Settings:
     imusic_fallback_enabled: bool
     imusic_base_url: str
     imusic_timeout: int
+    youtube_search_enabled: bool
+    telegram_single_instance_lock: bool
+    telegram_lock_stale_seconds: int
+    telegram_polling_timeout: int
+    telegram_tasks_concurrency_limit: int
 
     @property
     def telegram_max_audio_bytes(self) -> int:
@@ -121,7 +126,7 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    load_dotenv()
+    load_dotenv(dotenv_path=Path(".env"), override=False)
 
     bot_token = os.getenv("BOT_TOKEN", "").strip()
     if not bot_token:
@@ -136,6 +141,14 @@ def load_settings() -> Settings:
         raise ConfigError("PREFERRED_AUDIO_CODEC must be mp3 or m4a")
 
     cookies_b64, cookies_source = get_ytdlp_cookies_source()
+    imusic_fallback_enabled = _get_bool("IMUSIC_FALLBACK_ENABLED", True)
+    youtube_search_enabled = _get_bool(
+        "YOUTUBE_SEARCH_ENABLED",
+        not imusic_fallback_enabled,
+    )
+
+    if not imusic_fallback_enabled and not youtube_search_enabled:
+        raise ConfigError("Enable IMUSIC_FALLBACK_ENABLED or YOUTUBE_SEARCH_ENABLED")
 
     return Settings(
         bot_token=bot_token,
@@ -144,7 +157,7 @@ def load_settings() -> Settings:
         search_results_limit=_get_int("SEARCH_RESULTS_LIMIT", 5, minimum=1),
         max_query_length=_get_int("MAX_QUERY_LENGTH", 120, minimum=10),
         max_duration_seconds=_get_int("MAX_DURATION_SECONDS", 900, minimum=30),
-        max_concurrent_downloads=_get_int("MAX_CONCURRENT_DOWNLOADS", 2, minimum=1),
+        max_concurrent_downloads=_get_int("MAX_CONCURRENT_DOWNLOADS", 4, minimum=1),
         max_active_downloads_per_user=_get_int("MAX_ACTIVE_DOWNLOADS_PER_USER", 1, minimum=1),
         data_dir=data_dir,
         tmp_dir=tmp_dir,
@@ -156,7 +169,12 @@ def load_settings() -> Settings:
         ytdlp_cookies_source=cookies_source,
         ytdlp_proxy=os.getenv("YT_DLP_PROXY", "").strip() or None,
         ytdlp_player_clients=_parse_player_clients(os.getenv("YT_DLP_PLAYER_CLIENTS")),
-        imusic_fallback_enabled=_get_bool("IMUSIC_FALLBACK_ENABLED", True),
+        imusic_fallback_enabled=imusic_fallback_enabled,
         imusic_base_url=os.getenv("IMUSIC_BASE_URL", "https://two.imusic.fm/").strip(),
-        imusic_timeout=_get_int("IMUSIC_TIMEOUT", 12, minimum=3),
+        imusic_timeout=_get_int("IMUSIC_TIMEOUT", 8, minimum=3),
+        youtube_search_enabled=youtube_search_enabled,
+        telegram_single_instance_lock=_get_bool("TELEGRAM_SINGLE_INSTANCE_LOCK", True),
+        telegram_lock_stale_seconds=_get_int("TELEGRAM_LOCK_STALE_SECONDS", 120, minimum=30),
+        telegram_polling_timeout=_get_int("TELEGRAM_POLLING_TIMEOUT", 10, minimum=1),
+        telegram_tasks_concurrency_limit=_get_int("TELEGRAM_TASKS_CONCURRENCY_LIMIT", 20, minimum=1),
     )

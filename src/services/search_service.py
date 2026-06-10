@@ -15,11 +15,15 @@ class SearchValidationError(ValueError):
     pass
 
 
+class SearchProviderError(RuntimeError):
+    pass
+
+
 class SearchService:
     def __init__(
         self,
         *,
-        client: YtDlpClient,
+        client: YtDlpClient | None,
         settings: Settings,
         imusic_client: IMusicClient | None = None,
     ) -> None:
@@ -31,11 +35,14 @@ class SearchService:
         clean_query = self._validate_query(query)
         if self._imusic_client is not None:
             try:
-                imusic_results = await self._search_imusic(clean_query)
-                if imusic_results:
-                    return imusic_results
-            except IMusicError:
-                logger.warning("iMusic search failed, falling back to YouTube search", exc_info=True)
+                return await self._search_imusic(clean_query)
+            except IMusicError as exc:
+                logger.warning("iMusic search failed", exc_info=True)
+                if not self._settings.youtube_search_enabled:
+                    raise SearchProviderError("iMusic search failed") from exc
+
+        if self._client is None:
+            raise SearchProviderError("No search provider configured")
 
         results = await asyncio.to_thread(
             self._client.search,

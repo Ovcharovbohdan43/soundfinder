@@ -2,7 +2,7 @@
 
 ## Назначение
 
-Бот принимает текстовый поисковый запрос в Telegram, находит несколько аудио-кандидатов через `two.imusic.fm`, дает пользователю выбрать результат и отправляет выбранный трек как Telegram audio. YouTube используется только как резервный источник поиска.
+Бот принимает текстовый поисковый запрос в Telegram, находит несколько аудио-кандидатов через `two.imusic.fm`, дает пользователю выбрать результат и отправляет выбранный трек как Telegram audio. YouTube по умолчанию **не используется**; резервный YouTube-поиск включается только через `YOUTUBE_SEARCH_ENABLED=true`.
 
 ## Детальное описание
 
@@ -12,13 +12,13 @@
 2. `SearchService` валидирует длину и нормализует пробелы.
 3. `IMusicClient` выполняет поиск на `two.imusic.fm`.
 4. Слишком длинные результаты отфильтровываются.
-5. Если iMusic-поиск не дал результата или сайт недоступен, `YtDlpClient` выполняет резервный YouTube-поиск.
+5. Если iMusic-поиск не дал результата, бот возвращает пустой список. Если iMusic недоступен — ошибку поиска. YouTube-поиск возможен только при `YOUTUBE_SEARCH_ENABLED=true`.
 6. Handler строит inline-кнопки и сохраняет результаты в `SearchSessionStore`.
 7. Пользователь выбирает трек.
 8. `DownloadLimiter` проверяет per-user и global limits.
 9. `AudioCache` пытается найти Telegram `file_id`.
 10. При cache miss `DownloadService` скачивает файл через `two.imusic.fm`.
-11. Если результат был найден через YouTube-поиск, скачивание все равно идет через `two.imusic.fm` по названию трека.
+11. При включённом YouTube-поиске скачивание всё равно идёт через `two.imusic.fm` по названию трека.
 12. Бот проверяет размер, отправляет аудио и сохраняет `file_id` в кэш.
 13. Временная папка скачивания удаляется.
 
@@ -48,12 +48,17 @@ LOG_LEVEL=INFO
 TELEGRAM_MAX_AUDIO_MB=49
 SEARCH_RESULTS_LIMIT=5
 MAX_DURATION_SECONDS=900
-MAX_CONCURRENT_DOWNLOADS=2
+MAX_CONCURRENT_DOWNLOADS=4
 MAX_ACTIVE_DOWNLOADS_PER_USER=1
+TELEGRAM_SINGLE_INSTANCE_LOCK=true
+TELEGRAM_LOCK_STALE_SECONDS=120
+TELEGRAM_POLLING_TIMEOUT=10
+TELEGRAM_TASKS_CONCURRENCY_LIMIT=20
 PREFERRED_AUDIO_CODEC=mp3
 IMUSIC_FALLBACK_ENABLED=true
 IMUSIC_BASE_URL=https://two.imusic.fm/
-IMUSIC_TIMEOUT=12
+IMUSIC_TIMEOUT=8
+YOUTUBE_SEARCH_ENABLED=false
 ```
 
 ## Как тестировать
@@ -75,7 +80,9 @@ Manual e2e:
 
 ## Ограничения
 
-- На Railway YouTube часто блокирует datacenter IP. Для скачивания нужны cookies: см. [YOUTUBE_COOKIES.md](YOUTUBE_COOKIES.md).
+- На Railway YouTube часто блокирует datacenter IP. По умолчанию бот YouTube не трогает; cookies нужны только при `YOUTUBE_SEARCH_ENABLED=true`: см. [YOUTUBE_COOKIES.md](YOUTUBE_COOKIES.md).
+- Для polling должен быть запущен ровно один экземпляр бота. `railway.json` ограничивает сервис одной репликой, а `TELEGRAM_SINGLE_INSTANCE_LOCK=true` не дает второму процессу стартовать при общем `/app/data` volume.
+- При `TelegramConflictError` вне этого проекта проверь, что не запущен локальный бот или второй Railway-сервис с тем же `BOT_TOKEN`.
 - Telegram audio upload limit: до 50 MB, в конфиге по умолчанию 49 MB.
 - Поддерживаемые форматы отправки: `.mp3` и `.m4a`.
 - Railway filesystem может быть эфемерным; для постоянного SQLite-кэша нужен Volume на `/app/data`.
@@ -98,10 +105,15 @@ Manual e2e:
 - `src/infrastructure/imusic_client.py`
 - `src/infrastructure/audio_cache.py`
 - `src/infrastructure/rate_limit.py`
+- `src/infrastructure/single_instance.py`
 - `src/infrastructure/session_store.py`
+- `railway.json`
+- `.env.example`
+- `tests/test_config.py`
 - `tests/test_services.py`
+- `tests/test_single_instance.py`
 
 ## Версия / дата обновления
 
-Версия: 0.1.0  
-Дата обновления: 2026-06-09
+Версия: 0.1.1  
+Дата обновления: 2026-06-10

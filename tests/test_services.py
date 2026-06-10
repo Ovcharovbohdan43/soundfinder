@@ -6,10 +6,10 @@ import pytest
 
 from src.config import Settings
 from src.infrastructure.audio_cache import AudioCache
-from src.infrastructure.imusic_client import IMusicTrack
+from src.infrastructure.imusic_client import IMusicError, IMusicTrack
 from src.models import SearchResult
 from src.services.download_service import AudioTooLargeError, DownloadService
-from src.services.search_service import SearchService, SearchValidationError
+from src.services.search_service import SearchProviderError, SearchService, SearchValidationError
 
 
 def make_settings(tmp_path: Path) -> Settings:
@@ -35,6 +35,11 @@ def make_settings(tmp_path: Path) -> Settings:
         imusic_fallback_enabled=True,
         imusic_base_url="https://two.imusic.fm/",
         imusic_timeout=12,
+        youtube_search_enabled=False,
+        telegram_single_instance_lock=True,
+        telegram_lock_stale_seconds=120,
+        telegram_polling_timeout=10,
+        telegram_tasks_concurrency_limit=20,
     )
 
 
@@ -103,13 +108,54 @@ class FakeIMusicClient:
         return path
 
 
+class EmptyIMusicClient:
+    def search(self, query: str, *, limit: int) -> list[IMusicTrack]:
+        return []
+
+    def source_id(self, track: IMusicTrack) -> str:
+        return "imusic:empty"
+
+
 async def test_search_filters_long_results(tmp_path: Path) -> None:
     settings = make_settings(tmp_path)
+    settings = settings.__class__(
+        **{**settings.__dict__, "youtube_search_enabled": True, "imusic_fallback_enabled": False}
+    )
     service = SearchService(client=FakeSearchClient(), settings=settings)  # type: ignore[arg-type]
 
     results = await service.search("  artist   track ")
 
     assert [result.source_id for result in results] == ["ok"]
+
+
+async def test_search_empty_imusic_does_not_fallback_to_youtube(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    service = SearchService(
+        client=FailingSearchClient(),  # type: ignore[arg-type]
+        settings=settings,
+        imusic_client=EmptyIMusicClient(),  # type: ignore[arg-type]
+    )
+
+    results = await service.search("artist track")
+
+    assert results == []
+
+
+async def test_search_imusic_failure_raises_without_youtube(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+
+    class FailingIMusicClient:
+        def search(self, query: str, *, limit: int) -> list[IMusicTrack]:
+            raise IMusicError("imusic down")
+
+    service = SearchService(
+        client=FailingSearchClient(),  # type: ignore[arg-type]
+        settings=settings,
+        imusic_client=FailingIMusicClient(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(SearchProviderError):
+        await service.search("artist track")
 
 
 async def test_search_uses_imusic_before_youtube(tmp_path: Path) -> None:
