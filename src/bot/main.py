@@ -36,6 +36,7 @@ async def build_services(settings: Settings) -> AppServices:
         data_dir=settings.data_dir,
         cookies_file=settings.ytdlp_cookies_file,
         cookies_b64=settings.ytdlp_cookies_b64,
+        cookies_source=settings.ytdlp_cookies_source,
     )
     if cookies_path is None:
         logging.getLogger(__name__).warning(
@@ -82,8 +83,14 @@ async def main() -> None:
     dispatcher.include_router(start.router)
     dispatcher.include_router(search.router)
 
-    logging.getLogger(__name__).info("Music bot started in polling mode")
-    await dispatcher.start_polling(bot)
+    logger = logging.getLogger(__name__)
+    await bot.delete_webhook(drop_pending_updates=True)
+    logger.info(
+        "Music bot started in polling mode (cookies=%s, proxy=%s)",
+        "yes" if cookies_path else "no",
+        "yes" if settings.ytdlp_proxy else "no",
+    )
+    await dispatcher.start_polling(bot, drop_pending_updates=True)
 
 
 if __name__ == "__main__":

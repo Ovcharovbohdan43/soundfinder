@@ -37,10 +37,19 @@ def _parse_player_clients(raw_value: str | None) -> tuple[str, ...]:
     return clients
 
 
-def _get_ytdlp_cookies_b64() -> str | None:
+def _count_ytdlp_cookie_chunks() -> int:
+    pattern = re.compile(r"^YT_DLP_COOKIES_B64_(\d+)$")
+    return sum(1 for name in os.environ if pattern.match(name))
+
+
+def get_ytdlp_cookies_source() -> tuple[str | None, str]:
     direct_value = os.getenv("YT_DLP_COOKIES_B64", "").strip()
     if direct_value:
-        return direct_value
+        if _count_ytdlp_cookie_chunks() > 0:
+            raise ConfigError(
+                "Use either YT_DLP_COOKIES_B64 or numbered YT_DLP_COOKIES_B64_N chunks, not both."
+            )
+        return direct_value, "YT_DLP_COOKIES_B64"
 
     chunks: list[tuple[int, str]] = []
     pattern = re.compile(r"^YT_DLP_COOKIES_B64_(\d+)$")
@@ -55,7 +64,7 @@ def _get_ytdlp_cookies_b64() -> str | None:
         chunks.append((int(match.group(1)), chunk))
 
     if not chunks:
-        return None
+        return None, "none"
 
     chunks.sort(key=lambda item: item[0])
     expected_indexes = list(range(1, len(chunks) + 1))
@@ -66,7 +75,7 @@ def _get_ytdlp_cookies_b64() -> str | None:
             f"expected {expected_indexes}, got {actual_indexes}"
         )
 
-    return "".join(chunk for _, chunk in chunks)
+    return "".join(chunk for _, chunk in chunks), f"YT_DLP_COOKIES_B64 chunks ({len(chunks)})"
 
 
 @dataclass(frozen=True)
@@ -86,6 +95,7 @@ class Settings:
     ytdlp_socket_timeout: int
     ytdlp_cookies_file: str | None
     ytdlp_cookies_b64: str | None
+    ytdlp_cookies_source: str
     ytdlp_proxy: str | None
     ytdlp_player_clients: tuple[str, ...]
 
@@ -109,6 +119,8 @@ def load_settings() -> Settings:
     if preferred_audio_codec not in {"mp3", "m4a"}:
         raise ConfigError("PREFERRED_AUDIO_CODEC must be mp3 or m4a")
 
+    cookies_b64, cookies_source = get_ytdlp_cookies_source()
+
     return Settings(
         bot_token=bot_token,
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
@@ -124,7 +136,8 @@ def load_settings() -> Settings:
         preferred_audio_codec=preferred_audio_codec,
         ytdlp_socket_timeout=_get_int("YTDLP_SOCKET_TIMEOUT", 20, minimum=5),
         ytdlp_cookies_file=os.getenv("YT_DLP_COOKIES_FILE", "").strip() or None,
-        ytdlp_cookies_b64=_get_ytdlp_cookies_b64(),
+        ytdlp_cookies_b64=cookies_b64,
+        ytdlp_cookies_source=cookies_source,
         ytdlp_proxy=os.getenv("YT_DLP_PROXY", "").strip() or None,
         ytdlp_player_clients=_parse_player_clients(os.getenv("YT_DLP_PLAYER_CLIENTS")),
     )

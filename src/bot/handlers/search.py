@@ -145,8 +145,10 @@ async def select_track_handler(
         logger.exception("YouTube blocked download from server IP")
         await _send_error(
             callback,
-            "YouTube заблокировал скачивание с сервера Railway.\n\n"
-            "Нужно добавить cookies YouTube в Railway variable `YT_DLP_COOKIES_B64`.\n"
+            "YouTube заблокировал скачивание с IP Railway.\n\n"
+            "Cookies уже есть, но для datacenter IP часто нужен еще residential/SOCKS proxy "
+            "в переменной `YT_DLP_PROXY`.\n"
+            "Также проверь, что экспортированы только cookies YouTube/Google.\n"
             "Инструкция: docs/YOUTUBE_COOKIES.md",
         )
     except YtDlpError:

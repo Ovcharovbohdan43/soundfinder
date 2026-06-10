@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-10] - Исправлено: filter exported cookies to YouTube/Google only, improve polling startup to reduce Telegram conflicts, and document proxy requirement for datacenter IPs.
+
 [2026-06-09] - Исправлено: Railway variable length limit for YouTube cookies by supporting numbered `YT_DLP_COOKIES_B64_1`, `YT_DLP_COOKIES_B64_2`, ... chunks.
 
 [2026-06-09] - Исправлено: YouTube cloud download failures on Railway via cookies support, improved yt-dlp client options, Node.js runtime in Docker, clearer bot-blocked errors, and YouTube cookies setup guide.

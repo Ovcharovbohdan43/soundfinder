@@ -28,6 +28,7 @@ def make_settings(tmp_path: Path) -> Settings:
         ytdlp_socket_timeout=20,
         ytdlp_cookies_file=None,
         ytdlp_cookies_b64=None,
+        ytdlp_cookies_source="none",
         ytdlp_proxy=None,
         ytdlp_player_clients=("android_vr", "tv_embedded", "web_safari"),
     )
