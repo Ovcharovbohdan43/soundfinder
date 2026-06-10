@@ -16,9 +16,10 @@
 6. Пользователь выбирает трек.
 7. `DownloadLimiter` проверяет per-user и global limits.
 8. `AudioCache` пытается найти Telegram `file_id`.
-9. При cache miss `DownloadService` скачивает и конвертирует файл.
-10. Бот проверяет размер, отправляет аудио и сохраняет `file_id` в кэш.
-11. Временная папка скачивания удаляется.
+9. При cache miss `DownloadService` скачивает и конвертирует файл через YouTube/`yt-dlp`.
+10. Если YouTube-скачивание падает, `DownloadService` пробует fallback: поиск на `two.imusic.fm`, выбор первого результата и скачивание публичной прямой mp3-ссылки.
+11. Бот проверяет размер, отправляет аудио и сохраняет `file_id` в кэш.
+12. Временная папка скачивания удаляется.
 
 ## Как использовать
 
@@ -49,6 +50,9 @@ MAX_DURATION_SECONDS=900
 MAX_CONCURRENT_DOWNLOADS=2
 MAX_ACTIVE_DOWNLOADS_PER_USER=1
 PREFERRED_AUDIO_CODEC=mp3
+IMUSIC_FALLBACK_ENABLED=true
+IMUSIC_BASE_URL=https://two.imusic.fm/
+IMUSIC_TIMEOUT=12
 ```
 
 ## Как тестировать
@@ -75,6 +79,8 @@ Manual e2e:
 - Поддерживаемые форматы отправки: `.mp3` и `.m4a`.
 - Railway filesystem может быть эфемерным; для постоянного SQLite-кэша нужен Volume на `/app/data`.
 - `yt-dlp` зависит от изменений сторонних платформ и требует регулярного обновления.
+- Fallback `two.imusic.fm` зависит от HTML-структуры сайта. Если сайт изменит атрибуты `data-mp3`, `data-title` или search URL, fallback потребуется обновить.
+- Fallback использует только публичные прямые mp3-ссылки и не обходит DRM, авторизацию или платный доступ.
 - Бот не должен использоваться для обхода DRM, paywall или скачивания контента без разрешения.
 
 ## Затронутые модули
@@ -88,6 +94,7 @@ Manual e2e:
 - `src/services/download_service.py`
 - `src/services/container.py`
 - `src/infrastructure/yt_dlp_client.py`
+- `src/infrastructure/imusic_client.py`
 - `src/infrastructure/audio_cache.py`
 - `src/infrastructure/rate_limit.py`
 - `src/infrastructure/session_store.py`

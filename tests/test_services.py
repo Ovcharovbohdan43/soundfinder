@@ -6,6 +6,7 @@ import pytest
 
 from src.config import Settings
 from src.infrastructure.audio_cache import AudioCache
+from src.infrastructure.imusic_client import IMusicTrack
 from src.models import SearchResult
 from src.services.download_service import AudioTooLargeError, DownloadService
 from src.services.search_service import SearchService, SearchValidationError
@@ -31,6 +32,9 @@ def make_settings(tmp_path: Path) -> Settings:
         ytdlp_cookies_source="none",
         ytdlp_proxy=None,
         ytdlp_player_clients=("android_vr", "tv_embedded", "web_safari"),
+        imusic_fallback_enabled=True,
+        imusic_base_url="https://two.imusic.fm/",
+        imusic_timeout=12,
     )
 
 
@@ -52,6 +56,27 @@ class FakeDownloadClient:
         assert url == "https://example.com/ok"
         path = output_dir / f"audio.{preferred_codec}"
         path.write_bytes(b"x" * self._size_bytes)
+        return path
+
+
+class FailingDownloadClient:
+    def download_audio(self, url: str, *, output_dir: Path, preferred_codec: str) -> Path:
+        raise RuntimeError("primary failed")
+
+
+class FakeIMusicClient:
+    def search_first(self, query: str) -> IMusicTrack:
+        assert query == "Artist - Short"
+        return IMusicTrack(
+            title="Fallback Short",
+            artist="Fallback Artist",
+            download_url="https://two.imusic.fm/public/play_mp3.php?id=1",
+            duration=181,
+        )
+
+    def download_track(self, track: IMusicTrack, *, output_dir: Path) -> Path:
+        path = output_dir / "fallback.mp3"
+        path.write_bytes(b"fallback-audio")
         return path
 
 
@@ -81,6 +106,26 @@ async def test_download_rejects_files_above_telegram_limit(tmp_path: Path) -> No
 
     with pytest.raises(AudioTooLargeError):
         await service.download(SearchResult("ok", "Short", "https://example.com/ok", "Artist", 180))
+
+
+async def test_download_uses_imusic_fallback_when_primary_fails(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    service = DownloadService(
+        client=FailingDownloadClient(),  # type: ignore[arg-type]
+        settings=settings,
+        imusic_client=FakeIMusicClient(),  # type: ignore[arg-type]
+    )
+
+    audio = await service.download(SearchResult("ok", "Short", "https://example.com/ok", "Artist", 180))
+
+    try:
+        assert audio.source_id == "imusic:ok"
+        assert audio.title == "Fallback Short"
+        assert audio.performer == "Fallback Artist"
+        assert audio.duration == 181
+        assert audio.path.read_bytes() == b"fallback-audio"
+    finally:
+        service.cleanup(audio)
 
 
 async def test_audio_cache_roundtrip(tmp_path: Path) -> None:

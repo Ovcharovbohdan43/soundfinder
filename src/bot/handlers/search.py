@@ -11,7 +11,7 @@ from src.infrastructure.rate_limit import RateLimitExceeded
 from src.infrastructure.yt_dlp_client import YtDlpBotBlockedError, YtDlpError
 from src.models import SearchResult
 from src.services.container import AppServices
-from src.services.download_service import AudioDurationError, AudioTooLargeError
+from src.services.download_service import AudioDurationError, AudioTooLargeError, DownloadFallbackError
 from src.services.search_service import SearchValidationError
 
 router = Router()
@@ -141,6 +141,13 @@ async def select_track_handler(
         )
     except AudioDurationError:
         await _send_error(callback, "Трек слишком длинный для настроек бота.")
+    except DownloadFallbackError:
+        logger.exception("Primary and fallback downloads failed")
+        await _send_error(
+            callback,
+            "Не удалось скачать трек ни с YouTube, ни через fallback two.imusic.fm. "
+            "Попробуй другой результат или другой запрос.",
+        )
     except YtDlpBotBlockedError:
         logger.exception("YouTube blocked download from server IP")
         await _send_error(

@@ -27,6 +27,19 @@ def _get_int(name: str, default: int, *, minimum: int | None = None) -> int:
     return value
 
 
+def _get_bool(name: str, default: bool) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None or raw_value == "":
+        return default
+
+    normalized = raw_value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ConfigError(f"{name} must be a boolean")
+
+
 def _parse_player_clients(raw_value: str | None) -> tuple[str, ...]:
     if not raw_value:
         return ("android_vr", "tv_embedded", "web_safari")
@@ -98,6 +111,9 @@ class Settings:
     ytdlp_cookies_source: str
     ytdlp_proxy: str | None
     ytdlp_player_clients: tuple[str, ...]
+    imusic_fallback_enabled: bool
+    imusic_base_url: str
+    imusic_timeout: int
 
     @property
     def telegram_max_audio_bytes(self) -> int:
@@ -140,4 +156,7 @@ def load_settings() -> Settings:
         ytdlp_cookies_source=cookies_source,
         ytdlp_proxy=os.getenv("YT_DLP_PROXY", "").strip() or None,
         ytdlp_player_clients=_parse_player_clients(os.getenv("YT_DLP_PLAYER_CLIENTS")),
+        imusic_fallback_enabled=_get_bool("IMUSIC_FALLBACK_ENABLED", True),
+        imusic_base_url=os.getenv("IMUSIC_BASE_URL", "https://two.imusic.fm/").strip(),
+        imusic_timeout=_get_int("IMUSIC_TIMEOUT", 12, minimum=3),
     )

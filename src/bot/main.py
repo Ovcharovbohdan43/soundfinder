@@ -11,6 +11,7 @@ from aiogram.enums import ParseMode
 from src.bot.handlers import search, start
 from src.config import ConfigError, Settings, load_settings
 from src.infrastructure.audio_cache import AudioCache
+from src.infrastructure.imusic_client import IMusicClient
 from src.infrastructure.rate_limit import DownloadLimiter
 from src.infrastructure.session_store import SearchSessionStore
 from src.infrastructure.youtube_cookies import prepare_youtube_cookies
@@ -50,12 +51,21 @@ async def build_services(settings: Settings) -> AppServices:
         proxy=settings.ytdlp_proxy,
         player_clients=settings.ytdlp_player_clients,
     )
+    imusic_client = (
+        IMusicClient(base_url=settings.imusic_base_url, timeout=settings.imusic_timeout)
+        if settings.imusic_fallback_enabled
+        else None
+    )
     cache = AudioCache(settings.cache_db_path)
     await cache.init()
 
     return AppServices(
         search=SearchService(client=yt_dlp_client, settings=settings),
-        download=DownloadService(client=yt_dlp_client, settings=settings),
+        download=DownloadService(
+            client=yt_dlp_client,
+            settings=settings,
+            imusic_client=imusic_client,
+        ),
         cache=cache,
         limiter=DownloadLimiter(
             global_limit=settings.max_concurrent_downloads,

@@ -14,6 +14,7 @@ Telegram-бот на Python + aiogram, который ищет треки по �
 - Проверка лимита размера Telegram перед отправкой.
 - SQLite-кэш `telegram_file_id`, чтобы повторно не скачивать уже отправленные треки.
 - Ограничение параллельных скачиваний на пользователя и глобально.
+- Fallback на `two.imusic.fm`, если YouTube/`yt-dlp` не смог скачать трек.
 - Railway-ready Dockerfile с установленным `ffmpeg`.
 
 ## Локальный запуск
@@ -66,6 +67,9 @@ python -m src.bot.main
 - `YT_DLP_COOKIES_FILE`: путь к cookies-файлу вместо base64.
 - `YT_DLP_PROXY`: опциональный HTTP/SOCKS proxy.
 - `YT_DLP_PLAYER_CLIENTS`: список YouTube client-ов через запятую.
+- `IMUSIC_FALLBACK_ENABLED`: включает fallback на `two.imusic.fm`, по умолчанию `true`.
+- `IMUSIC_BASE_URL`: базовый URL fallback-сервиса, по умолчанию `https://two.imusic.fm/`.
+- `IMUSIC_TIMEOUT`: timeout для поиска/скачивания через fallback.
 
 ## Тестирование
 
@@ -84,6 +88,8 @@ pytest
 
 Бот не обходит DRM, paywall, приватные ссылки или платный доступ. Используй его только для контента, который разрешено скачивать и распространять. Некоторые платформы могут запрещать скачивание своими правилами использования.
 
+Fallback `two.imusic.fm` использует только публичные прямые ссылки на mp3, найденные на странице поиска. Он не обходит авторизацию, защиту или платный доступ.
+
 Telegram Bot API принимает аудио для музыкального плеера в `.mp3`/`.m4a`; текущий лимит отправки аудио ботом составляет до 50 MB.
 
 ## Затронутые модули
@@ -94,6 +100,7 @@ Telegram Bot API принимает аудио для музыкального �
 - `src/services/search_service.py`: валидация и фильтрация результатов.
 - `src/services/download_service.py`: скачивание, проверка размера, cleanup.
 - `src/infrastructure/yt_dlp_client.py`: адаптер `yt-dlp`.
+- `src/infrastructure/imusic_client.py`: fallback-клиент `two.imusic.fm`.
 - `src/infrastructure/audio_cache.py`: SQLite-кэш Telegram `file_id`.
 - `src/infrastructure/rate_limit.py`: лимиты активных скачиваний.
 
