@@ -54,7 +54,8 @@ python -m src.bot.main
 
 - `BOT_TOKEN`: обязательный токен Telegram Bot API.
 - `TELEGRAM_MAX_AUDIO_MB`: лимит отправляемого файла, по умолчанию 49.
-- `SEARCH_RESULTS_LIMIT`: количество вариантов в выдаче.
+- `SEARCH_RESULTS_LIMIT`: максимум найденных вариантов по запросу.
+- `SEARCH_RESULTS_PAGE_SIZE`: количество кнопок с треками на одной странице выдачи.
 - `MAX_QUERY_LENGTH`: максимальная длина пользовательского запроса.
 - `MAX_DURATION_SECONDS`: максимальная длительность трека.
 - `MAX_CONCURRENT_DOWNLOADS`: общий лимит параллельных скачиваний.

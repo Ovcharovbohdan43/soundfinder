@@ -97,6 +97,7 @@ class Settings:
     log_level: str
     telegram_max_audio_mb: int
     search_results_limit: int
+    search_results_page_size: int
     max_query_length: int
     max_duration_seconds: int
     max_concurrent_downloads: int
@@ -154,7 +155,8 @@ def load_settings() -> Settings:
         bot_token=bot_token,
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         telegram_max_audio_mb=_get_int("TELEGRAM_MAX_AUDIO_MB", 49, minimum=1),
-        search_results_limit=_get_int("SEARCH_RESULTS_LIMIT", 5, minimum=1),
+        search_results_limit=_get_int("SEARCH_RESULTS_LIMIT", 30, minimum=1),
+        search_results_page_size=_get_int("SEARCH_RESULTS_PAGE_SIZE", 5, minimum=1),
         max_query_length=_get_int("MAX_QUERY_LENGTH", 120, minimum=10),
         max_duration_seconds=_get_int("MAX_DURATION_SECONDS", 900, minimum=30),
         max_concurrent_downloads=_get_int("MAX_CONCURRENT_DOWNLOADS", 4, minimum=1),

@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-10] - Добавлено: paginated search results with `Назад`/`Дальше` navigation and separate `SEARCH_RESULTS_PAGE_SIZE` setting.
+
 [2026-06-10] - Исправлено: add a single-instance polling lock, limit Railway to one replica, tune aiogram polling concurrency, and lower iMusic timeout to reduce Telegram conflicts and hangs.
 
 [2026-06-10] - Изменено: YouTube search is disabled by default when iMusic is enabled (`YOUTUBE_SEARCH_ENABLED=false`), so Railway no longer hits YouTube on empty iMusic results or search failures.

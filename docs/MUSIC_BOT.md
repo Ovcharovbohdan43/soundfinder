@@ -13,8 +13,8 @@
 3. `IMusicClient` выполняет поиск на `two.imusic.fm`.
 4. Слишком длинные результаты отфильтровываются.
 5. Если iMusic-поиск не дал результата, бот возвращает пустой список. Если iMusic недоступен — ошибку поиска. YouTube-поиск возможен только при `YOUTUBE_SEARCH_ENABLED=true`.
-6. Handler строит inline-кнопки и сохраняет результаты в `SearchSessionStore`.
-7. Пользователь выбирает трек.
+6. Handler сохраняет весь список результатов в `SearchSessionStore` и показывает первую страницу inline-кнопок.
+7. Пользователь переключает страницы кнопками `Назад`/`Дальше` или выбирает трек.
 8. `DownloadLimiter` проверяет per-user и global limits.
 9. `AudioCache` пытается найти Telegram `file_id`.
 10. При cache miss `DownloadService` скачивает файл через `two.imusic.fm`.
@@ -36,7 +36,7 @@
 daft punk harder better faster stronger
 ```
 
-После выдачи нажми на кнопку нужного результата.
+После выдачи нажми на кнопку нужного результата. Если результатов больше одной страницы, используй `Назад` и `Дальше`.
 
 ## Примеры настройки
 
@@ -46,7 +46,8 @@ Railway variables:
 BOT_TOKEN=123456:secret
 LOG_LEVEL=INFO
 TELEGRAM_MAX_AUDIO_MB=49
-SEARCH_RESULTS_LIMIT=5
+SEARCH_RESULTS_LIMIT=30
+SEARCH_RESULTS_PAGE_SIZE=5
 MAX_DURATION_SECONDS=900
 MAX_CONCURRENT_DOWNLOADS=4
 MAX_ACTIVE_DOWNLOADS_PER_USER=1
@@ -88,6 +89,7 @@ Manual e2e:
 - Railway filesystem может быть эфемерным; для постоянного SQLite-кэша нужен Volume на `/app/data`.
 - `yt-dlp` зависит от изменений сторонних платформ и требует регулярного обновления.
 - `two.imusic.fm` зависит от HTML-структуры сайта. Если сайт изменит атрибуты `data-mp3`, `data-title` или search URL, клиент потребуется обновить.
+- `SEARCH_RESULTS_LIMIT` ограничивает максимум результатов, которые бот забирает из ответа iMusic. `SEARCH_RESULTS_PAGE_SIZE` задаёт размер одной страницы кнопок.
 - `two.imusic.fm` используется только через публичные прямые mp3-ссылки и не обходит DRM, авторизацию или платный доступ.
 - Бот не должен использоваться для обхода DRM, paywall или скачивания контента без разрешения.
 
@@ -110,10 +112,12 @@ Manual e2e:
 - `railway.json`
 - `.env.example`
 - `tests/test_config.py`
+- `tests/test_search_keyboard.py`
 - `tests/test_services.py`
+- `tests/test_session_store.py`
 - `tests/test_single_instance.py`
 
 ## Версия / дата обновления
 
-Версия: 0.1.1  
+Версия: 0.1.2  
 Дата обновления: 2026-06-10

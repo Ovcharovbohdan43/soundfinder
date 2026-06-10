@@ -67,6 +67,8 @@ def test_load_settings_uses_fast_polling_defaults(
     settings = load_settings()
 
     assert settings.youtube_search_enabled is False
+    assert settings.search_results_limit == 30
+    assert settings.search_results_page_size == 5
     assert settings.telegram_single_instance_lock is True
     assert settings.telegram_polling_timeout == 10
     assert settings.telegram_tasks_concurrency_limit == 20

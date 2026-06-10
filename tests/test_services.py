@@ -18,6 +18,7 @@ def make_settings(tmp_path: Path) -> Settings:
         log_level="INFO",
         telegram_max_audio_mb=1,
         search_results_limit=5,
+        search_results_page_size=5,
         max_query_length=20,
         max_duration_seconds=300,
         max_concurrent_downloads=2,
