@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-10] - Исправлено: parse real artist and track titles from nested iMusic HTML instead of showing the generic fallback title.
+
 [2026-06-10] - Изменено: `two.imusic.fm` is now the primary search and download provider, YouTube is limited to fallback search, and audio captions now show the bot link instead of technical status text.
 
 [2026-06-10] - Исправлено: filter exported cookies to YouTube/Google only, improve polling startup to reduce Telegram conflicts, and document proxy requirement for datacenter IPs.

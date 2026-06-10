@@ -103,8 +103,16 @@ class IMusicClient:
 
     def _parse_tracks(self, html_text: str) -> list[IMusicTrack]:
         tracks: list[IMusicTrack] = []
-        for item in re.findall(r"<li\b[^>]*class=[\"'][^\"']*\btrack\b[^\"']*[\"'][^>]*>", html_text):
-            attrs = self._parse_attrs(item)
+        for item in re.findall(
+            r"<li\b[^>]*class=[\"'][^\"']*\btrack\b[^\"']*[\"'][^>]*>.*?</li>",
+            html_text,
+            flags=re.DOTALL | re.IGNORECASE,
+        ):
+            opening_tag_match = re.match(r"<li\b[^>]*>", item, flags=re.DOTALL | re.IGNORECASE)
+            if opening_tag_match is None:
+                continue
+
+            attrs = self._parse_attrs(opening_tag_match.group(0))
             raw_download_url = attrs.get("data-mp3") or attrs.get("data-url_song")
             if not raw_download_url:
                 continue
@@ -115,21 +123,103 @@ class IMusicClient:
             except IMusicError:
                 continue
 
-            title = attrs.get("data-title") or attrs.get("data-song") or attrs.get("data-name")
-            artist = attrs.get("data-artist") or attrs.get("data-singer")
+            artist, title = self._extract_track_name(item, attrs)
             if not title:
-                title = "iMusic fallback track"
+                title = self._extract_visible_text(item) or "Unknown track"
 
             tracks.append(
                 IMusicTrack(
-                    title=html.unescape(title).strip(),
-                    artist=html.unescape(artist).strip() if artist else None,
+                    title=title,
+                    artist=artist,
                     download_url=download_url,
                     duration=self._parse_duration(attrs.get("data-duration")),
                 )
             )
 
         return tracks
+
+    def _extract_track_name(self, item: str, attrs: dict[str, str]) -> tuple[str | None, str | None]:
+        artist = self._clean_text(attrs.get("data-artist") or attrs.get("data-singer"))
+        title = self._clean_text(attrs.get("data-title") or attrs.get("data-song") or attrs.get("data-name"))
+        if artist or title:
+            return artist, title
+
+        title_candidates = self._extract_text_by_class(item, ("playlist-name", "track-name", "song-name"))
+        artist_candidates = self._extract_text_by_class(
+            item,
+            ("playlist-artist", "track-artist", "artist", "singer"),
+        )
+
+        title = title_candidates[0] if title_candidates else None
+        artist = artist_candidates[0] if artist_candidates else None
+
+        if title:
+            split_artist, split_title = self._split_artist_title(title)
+            artist = artist or split_artist
+            title = split_title
+
+        if not title:
+            h2_text = self._extract_first_tag_text(item, "h2")
+            h3_text = self._extract_first_tag_text(item, "h3")
+            artist = artist or h3_text
+            title = h2_text
+
+        if title:
+            split_artist, split_title = self._split_artist_title(title)
+            artist = artist or split_artist
+            title = split_title
+
+        return artist, title
+
+    @classmethod
+    def _extract_text_by_class(cls, item: str, class_names: tuple[str, ...]) -> list[str]:
+        values: list[str] = []
+        for class_name in class_names:
+            pattern = (
+                r"<(?P<tag>[a-z0-9]+)\b[^>]*class=[\"'][^\"']*\b"
+                + re.escape(class_name)
+                + r"\b[^\"']*[\"'][^>]*>(?P<body>.*?)</(?P=tag)>"
+            )
+            for match in re.finditer(pattern, item, flags=re.DOTALL | re.IGNORECASE):
+                text = cls._clean_text(cls._strip_tags(match.group("body")))
+                if text:
+                    values.append(text)
+        return values
+
+    @classmethod
+    def _extract_first_tag_text(cls, item: str, tag: str) -> str | None:
+        match = re.search(
+            rf"<{tag}\b[^>]*>(?P<body>.*?)</{tag}>",
+            item,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+        if match is None:
+            return None
+        return cls._clean_text(cls._strip_tags(match.group("body")))
+
+    @classmethod
+    def _extract_visible_text(cls, item: str) -> str | None:
+        return cls._clean_text(cls._strip_tags(item))
+
+    @staticmethod
+    def _split_artist_title(value: str) -> tuple[str | None, str]:
+        for separator in (" - ", " – ", " — "):
+            if separator in value:
+                artist, title = value.split(separator, 1)
+                return artist.strip() or None, title.strip() or value
+        return None, value
+
+    @staticmethod
+    def _strip_tags(value: str) -> str:
+        return re.sub(r"<[^>]+>", " ", value)
+
+    @staticmethod
+    def _clean_text(value: str | None) -> str | None:
+        if not value:
+            return None
+        cleaned = html.unescape(value)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        return cleaned or None
 
     @staticmethod
     def _parse_attrs(tag: str) -> dict[str, str]:
