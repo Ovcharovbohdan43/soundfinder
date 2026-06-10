@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-10] - Добавлено: direct Telegram audio URL delivery with automatic fallback to server-side download for faster first sends.
+
 [2026-06-10] - Добавлено: paginated search results with `Назад`/`Дальше` navigation and separate `SEARCH_RESULTS_PAGE_SIZE` setting.
 
 [2026-06-10] - Исправлено: add a single-instance polling lock, limit Railway to one replica, tune aiogram polling concurrency, and lower iMusic timeout to reduce Telegram conflicts and hangs.

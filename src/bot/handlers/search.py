@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
@@ -230,6 +231,30 @@ async def select_track_handler(
                     caption=BOT_CAPTION,
                 )
                 return
+
+            if settings.direct_telegram_audio_url_enabled:
+                try:
+                    sent_message = await message.answer_audio(
+                        result.url,
+                        title=result.title,
+                        performer=result.uploader,
+                        duration=result.duration,
+                        caption=BOT_CAPTION,
+                    )
+                    if sent_message.audio is not None:
+                        await services.cache.upsert(
+                            source_id=result.source_id,
+                            telegram_file_id=sent_message.audio.file_id,
+                            title=result.title,
+                            performer=result.uploader,
+                            duration=result.duration,
+                        )
+                    return
+                except TelegramAPIError:
+                    logger.warning(
+                        "Direct Telegram audio URL failed, falling back to server download",
+                        exc_info=True,
+                    )
 
             audio = await services.download.download(result)
             try:

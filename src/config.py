@@ -120,6 +120,7 @@ class Settings:
     telegram_lock_stale_seconds: int
     telegram_polling_timeout: int
     telegram_tasks_concurrency_limit: int
+    direct_telegram_audio_url_enabled: bool
 
     @property
     def telegram_max_audio_bytes(self) -> int:
@@ -179,4 +180,5 @@ def load_settings() -> Settings:
         telegram_lock_stale_seconds=_get_int("TELEGRAM_LOCK_STALE_SECONDS", 120, minimum=30),
         telegram_polling_timeout=_get_int("TELEGRAM_POLLING_TIMEOUT", 10, minimum=1),
         telegram_tasks_concurrency_limit=_get_int("TELEGRAM_TASKS_CONCURRENCY_LIMIT", 20, minimum=1),
+        direct_telegram_audio_url_enabled=_get_bool("DIRECT_TELEGRAM_AUDIO_URL_ENABLED", True),
     )

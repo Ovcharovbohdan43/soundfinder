@@ -41,6 +41,7 @@ def make_settings(tmp_path: Path) -> Settings:
         telegram_lock_stale_seconds=120,
         telegram_polling_timeout=10,
         telegram_tasks_concurrency_limit=20,
+        direct_telegram_audio_url_enabled=True,
     )
 
 

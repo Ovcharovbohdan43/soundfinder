@@ -60,6 +60,7 @@ python -m src.bot.main
 - `MAX_DURATION_SECONDS`: максимальная длительность трека.
 - `MAX_CONCURRENT_DOWNLOADS`: общий лимит параллельных скачиваний.
 - `MAX_ACTIVE_DOWNLOADS_PER_USER`: лимит активных скачиваний на пользователя.
+- `DIRECT_TELEGRAM_AUDIO_URL_ENABLED`: если `true`, бот сначала отдаёт Telegram прямой mp3 URL и скачивает файл сам только при fallback.
 - `DATA_DIR`, `TMP_DIR`, `CACHE_DB_PATH`: пути хранения кэша и временных файлов.
 - `PREFERRED_AUDIO_CODEC`: `mp3` или `m4a`.
 - `YTDLP_SOCKET_TIMEOUT`: timeout сетевых операций downloader-а.

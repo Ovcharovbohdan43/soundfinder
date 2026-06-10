@@ -17,10 +17,11 @@
 7. Пользователь переключает страницы кнопками `Назад`/`Дальше` или выбирает трек.
 8. `DownloadLimiter` проверяет per-user и global limits.
 9. `AudioCache` пытается найти Telegram `file_id`.
-10. При cache miss `DownloadService` скачивает файл через `two.imusic.fm`.
-11. При включённом YouTube-поиске скачивание всё равно идёт через `two.imusic.fm` по названию трека.
-12. Бот проверяет размер, отправляет аудио и сохраняет `file_id` в кэш.
-13. Временная папка скачивания удаляется.
+10. При cache miss и `DIRECT_TELEGRAM_AUDIO_URL_ENABLED=true` бот пробует отправить прямой mp3 URL в Telegram без скачивания на Railway.
+11. Если Telegram не принимает URL, `DownloadService` скачивает файл через `two.imusic.fm` и отправляет его обычной загрузкой.
+12. При включённом YouTube-поиске скачивание всё равно идёт через `two.imusic.fm` по названию трека.
+13. Бот проверяет размер при server-side скачивании, отправляет аудио и сохраняет `file_id` в кэш.
+14. Временная папка скачивания удаляется.
 
 ## Как использовать
 
@@ -55,6 +56,7 @@ TELEGRAM_SINGLE_INSTANCE_LOCK=true
 TELEGRAM_LOCK_STALE_SECONDS=120
 TELEGRAM_POLLING_TIMEOUT=10
 TELEGRAM_TASKS_CONCURRENCY_LIMIT=20
+DIRECT_TELEGRAM_AUDIO_URL_ENABLED=true
 PREFERRED_AUDIO_CODEC=mp3
 IMUSIC_FALLBACK_ENABLED=true
 IMUSIC_BASE_URL=https://two.imusic.fm/
@@ -90,6 +92,7 @@ Manual e2e:
 - `yt-dlp` зависит от изменений сторонних платформ и требует регулярного обновления.
 - `two.imusic.fm` зависит от HTML-структуры сайта. Если сайт изменит атрибуты `data-mp3`, `data-title` или search URL, клиент потребуется обновить.
 - `SEARCH_RESULTS_LIMIT` ограничивает максимум результатов, которые бот забирает из ответа iMusic. `SEARCH_RESULTS_PAGE_SIZE` задаёт размер одной страницы кнопок.
+- `DIRECT_TELEGRAM_AUDIO_URL_ENABLED=true` ускоряет первую отправку: Telegram сам скачивает mp3 по URL. Если URL недоступен для Telegram, бот автоматически откатывается на server-side download.
 - `two.imusic.fm` используется только через публичные прямые mp3-ссылки и не обходит DRM, авторизацию или платный доступ.
 - Бот не должен использоваться для обхода DRM, paywall или скачивания контента без разрешения.
 
@@ -119,5 +122,5 @@ Manual e2e:
 
 ## Версия / дата обновления
 
-Версия: 0.1.2  
+Версия: 0.1.3  
 Дата обновления: 2026-06-10
