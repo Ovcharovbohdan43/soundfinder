@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 from src.config import Settings
-from src.infrastructure.imusic_client import IMusicClient, IMusicError, IMusicNotFoundError
+from src.infrastructure.imusic_client import IMusicClient, IMusicError, IMusicNotFoundError, IMusicTrack
 from src.infrastructure.yt_dlp_client import YtDlpClient
 from src.models import DownloadedAudio, SearchResult
 
@@ -46,6 +46,9 @@ class DownloadService:
         work_dir = Path(tempfile.mkdtemp(prefix=f"{result.source_id}_", dir=self._settings.tmp_dir))
 
         try:
+            if self._imusic_client is not None:
+                return await self._download_from_imusic(result, work_dir)
+
             try:
                 audio_path = await asyncio.to_thread(
                     self._client.download_audio,
@@ -65,10 +68,7 @@ class DownloadService:
                 if self._imusic_client is None:
                     raise
 
-                logger.warning(
-                    "Primary YouTube download failed, trying iMusic fallback: %s",
-                    youtube_error,
-                )
+                logger.warning("YouTube download failed, trying iMusic fallback: %s", youtube_error)
                 return await self._download_from_imusic(result, work_dir, youtube_error)
         except Exception:
             shutil.rmtree(work_dir, ignore_errors=True)
@@ -78,13 +78,21 @@ class DownloadService:
         self,
         result: SearchResult,
         work_dir: Path,
-        primary_error: Exception,
+        primary_error: Exception | None = None,
     ) -> DownloadedAudio:
         assert self._imusic_client is not None
 
-        query = result.display_title
         try:
-            track = await asyncio.to_thread(self._imusic_client.search_first, query)
+            if self._imusic_client.is_imusic_source(result.source_id):
+                track = IMusicTrack(
+                    title=result.title,
+                    artist=result.uploader,
+                    download_url=result.url,
+                    duration=result.duration,
+                )
+            else:
+                track = await asyncio.to_thread(self._imusic_client.search_first, result.display_title)
+
             if track.duration is not None and track.duration > self._settings.max_duration_seconds:
                 raise AudioDurationError("Fallback track duration is above configured limit")
 
@@ -94,12 +102,16 @@ class DownloadService:
                 output_dir=work_dir,
             )
         except (IMusicNotFoundError, IMusicError) as exc:
-            raise DownloadFallbackError("Both YouTube and iMusic fallback failed") from primary_error or exc
+            raise DownloadFallbackError("iMusic download failed") from primary_error or exc
 
         return self._build_downloaded_audio(
             result=result,
             audio_path=audio_path,
-            source_id=f"imusic:{result.source_id}",
+            source_id=(
+                result.source_id
+                if self._imusic_client.is_imusic_source(result.source_id)
+                else f"imusic:{result.source_id}"
+            ),
             title=track.title or result.title,
             performer=track.artist or result.uploader,
             duration=track.duration or result.duration,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import hashlib
 import logging
 import re
 import shutil
@@ -36,13 +37,23 @@ class IMusicClient:
         parsed_base = urlparse(self._base_url)
         self._allowed_host = parsed_base.netloc.lower()
 
-    def search_first(self, query: str) -> IMusicTrack:
+    def search(self, query: str, *, limit: int) -> list[IMusicTrack]:
         search_url = urljoin(self._base_url, f"search/{quote(query.strip())}")
         html_text = self._read_text(search_url)
-        tracks = self._parse_tracks(html_text)
+        return self._parse_tracks(html_text)[:limit]
+
+    def search_first(self, query: str) -> IMusicTrack:
+        tracks = self.search(query, limit=1)
         if not tracks:
             raise IMusicNotFoundError("No tracks found on iMusic fallback")
         return tracks[0]
+
+    def source_id(self, track: IMusicTrack) -> str:
+        digest = hashlib.sha1(track.download_url.encode("utf-8")).hexdigest()[:16]
+        return f"imusic:{digest}"
+
+    def is_imusic_source(self, source_id: str) -> bool:
+        return source_id.startswith("imusic:")
 
     def download_track(self, track: IMusicTrack, *, output_dir: Path) -> Path:
         self._ensure_allowed_url(track.download_url)

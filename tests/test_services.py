@@ -48,6 +48,11 @@ class FakeSearchClient:
         ]
 
 
+class FailingSearchClient:
+    def search(self, query: str, *, limit: int) -> list[SearchResult]:
+        raise AssertionError("YouTube search should not be used when iMusic returns results")
+
+
 class FakeDownloadClient:
     def __init__(self, *, size_bytes: int) -> None:
         self._size_bytes = size_bytes
@@ -65,6 +70,24 @@ class FailingDownloadClient:
 
 
 class FakeIMusicClient:
+    def source_id(self, track: IMusicTrack) -> str:
+        return "imusic:test"
+
+    def is_imusic_source(self, source_id: str) -> bool:
+        return source_id.startswith("imusic:")
+
+    def search(self, query: str, *, limit: int) -> list[IMusicTrack]:
+        assert query == "artist track"
+        assert limit == 5
+        return [
+            IMusicTrack(
+                title="iMusic Short",
+                artist="iMusic Artist",
+                download_url="https://two.imusic.fm/public/play_mp3.php?id=1",
+                duration=120,
+            )
+        ]
+
     def search_first(self, query: str) -> IMusicTrack:
         assert query == "Artist - Short"
         return IMusicTrack(
@@ -87,6 +110,22 @@ async def test_search_filters_long_results(tmp_path: Path) -> None:
     results = await service.search("  artist   track ")
 
     assert [result.source_id for result in results] == ["ok"]
+
+
+async def test_search_uses_imusic_before_youtube(tmp_path: Path) -> None:
+    settings = make_settings(tmp_path)
+    service = SearchService(
+        client=FailingSearchClient(),  # type: ignore[arg-type]
+        settings=settings,
+        imusic_client=FakeIMusicClient(),  # type: ignore[arg-type]
+    )
+
+    results = await service.search("artist track")
+
+    assert len(results) == 1
+    assert results[0].source_id.startswith("imusic:")
+    assert results[0].title == "iMusic Short"
+    assert results[0].uploader == "iMusic Artist"
 
 
 async def test_search_rejects_long_query(tmp_path: Path) -> None:

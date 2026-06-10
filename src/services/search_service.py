@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from src.config import Settings
+from src.infrastructure.imusic_client import IMusicClient, IMusicError
 from src.infrastructure.yt_dlp_client import YtDlpClient
 from src.models import SearchResult
+
+logger = logging.getLogger(__name__)
 
 
 class SearchValidationError(ValueError):
@@ -12,12 +16,27 @@ class SearchValidationError(ValueError):
 
 
 class SearchService:
-    def __init__(self, *, client: YtDlpClient, settings: Settings) -> None:
+    def __init__(
+        self,
+        *,
+        client: YtDlpClient,
+        settings: Settings,
+        imusic_client: IMusicClient | None = None,
+    ) -> None:
         self._client = client
         self._settings = settings
+        self._imusic_client = imusic_client
 
     async def search(self, query: str) -> list[SearchResult]:
         clean_query = self._validate_query(query)
+        if self._imusic_client is not None:
+            try:
+                imusic_results = await self._search_imusic(clean_query)
+                if imusic_results:
+                    return imusic_results
+            except IMusicError:
+                logger.warning("iMusic search failed, falling back to YouTube search", exc_info=True)
+
         results = await asyncio.to_thread(
             self._client.search,
             clean_query,
@@ -29,6 +48,26 @@ class SearchService:
             for result in results
             if result.duration is None or result.duration <= self._settings.max_duration_seconds
         ]
+
+    async def _search_imusic(self, query: str) -> list[SearchResult]:
+        assert self._imusic_client is not None
+        tracks = await asyncio.to_thread(
+            self._imusic_client.search,
+            query,
+            limit=self._settings.search_results_limit,
+        )
+        results: list[SearchResult] = []
+        for track in tracks:
+            result = SearchResult(
+                source_id=self._imusic_client.source_id(track),
+                title=track.title,
+                url=track.download_url,
+                uploader=track.artist,
+                duration=track.duration,
+            )
+            if result.duration is None or result.duration <= self._settings.max_duration_seconds:
+                results.append(result)
+        return results
 
     def _validate_query(self, query: str) -> str:
         clean_query = " ".join(query.strip().split())

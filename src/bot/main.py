@@ -61,7 +61,11 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
     await cache.init()
 
     services = AppServices(
-        search=SearchService(client=yt_dlp_client, settings=settings),
+        search=SearchService(
+            client=yt_dlp_client,
+            settings=settings,
+            imusic_client=imusic_client,
+        ),
         download=DownloadService(
             client=yt_dlp_client,
             settings=settings,

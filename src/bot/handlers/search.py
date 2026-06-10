@@ -16,6 +16,7 @@ from src.services.search_service import SearchValidationError
 
 router = Router()
 logger = logging.getLogger(__name__)
+BOT_CAPTION = '<a href="https://t.me/sound_finderbot">@sound_finderbot</a>'
 
 
 def _format_duration(seconds: int | None) -> str:
@@ -47,7 +48,7 @@ def _build_results_keyboard(
 
 @router.message(Command("cancel"))
 async def cancel_handler(message: Message) -> None:
-    await message.answer("Активные скачивания нельзя отменить в MVP, но новые задачи можно не запускать.")
+    await message.answer("Хорошо. Просто отправь новый запрос, когда захочешь найти другой трек.")
 
 
 @router.message(F.text)
@@ -98,7 +99,7 @@ async def select_track_handler(
         return
 
     await callback.answer("Готовлю аудио...")
-    await message.edit_text(f"Скачиваю: {result.display_title}")
+    await message.edit_text(f"Готовлю: {result.display_title}")
 
     try:
         async with services.limiter.acquire(user_id):
@@ -109,7 +110,7 @@ async def select_track_handler(
                     title=cached.title,
                     performer=cached.performer,
                     duration=cached.duration,
-                    caption="Отправлено из кэша.",
+                    caption=BOT_CAPTION,
                 )
                 return
 
@@ -120,7 +121,7 @@ async def select_track_handler(
                     title=audio.title,
                     performer=audio.performer,
                     duration=audio.duration,
-                    caption="Готово.",
+                    caption=BOT_CAPTION,
                 )
                 if sent_message.audio is not None:
                     await services.cache.upsert(
@@ -142,22 +143,14 @@ async def select_track_handler(
     except AudioDurationError:
         await _send_error(callback, "Трек слишком длинный для настроек бота.")
     except DownloadFallbackError:
-        logger.exception("Primary and fallback downloads failed")
+        logger.exception("iMusic download failed")
         await _send_error(
             callback,
-            "Не удалось скачать трек ни с YouTube, ни через fallback two.imusic.fm. "
-            "Попробуй другой результат или другой запрос.",
+            "Не удалось скачать этот трек. Попробуй другой результат или другой запрос.",
         )
     except YtDlpBotBlockedError:
         logger.exception("YouTube blocked download from server IP")
-        await _send_error(
-            callback,
-            "YouTube заблокировал скачивание с IP Railway.\n\n"
-            "Cookies уже есть, но для datacenter IP часто нужен еще residential/SOCKS proxy "
-            "в переменной `YT_DLP_PROXY`.\n"
-            "Также проверь, что экспортированы только cookies YouTube/Google.\n"
-            "Инструкция: docs/YOUTUBE_COOKIES.md",
-        )
+        await _send_error(callback, "Не удалось скачать этот трек. Попробуй другой результат.")
     except YtDlpError:
         logger.exception("Download provider failed")
         await _send_error(callback, "Не удалось скачать этот трек. Попробуй другой результат.")
