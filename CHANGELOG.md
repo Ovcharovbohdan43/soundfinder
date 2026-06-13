@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-13] - Исправлено: запросы к `api.ortified.ws` player теперь отправляются с браузерными iframe headers, чтобы снизить `HTTP 410 Gone` на Railway.
+
 [2026-06-13] - Добавлено: fallback parser для нового `api.ortified.ws` / `player-venom` Kinogo player, который извлекает HLS-ссылки `*.interkh.com`.
 
 [2026-06-13] - Исправлено: добавлен текущий домен Kinogo player 1 `api.ortified.ws` в безопасный URL allowlist.

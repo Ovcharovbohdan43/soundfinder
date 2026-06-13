@@ -68,6 +68,17 @@ def test_default_allowed_hosts_include_current_ortified_player(client: KinogoCli
     client._ensure_allowed_url("https://cdn-1.interkh.com/movie/master.m3u8")  # noqa: SLF001
 
 
+def test_player_request_headers_match_browser_iframe_navigation(client: KinogoClient) -> None:
+    headers = client._request_headers(referer="https://kinogo.family/")  # noqa: SLF001
+
+    assert headers["Referer"] == "https://kinogo.family/"
+    assert headers["Origin"] == "https://kinogo.family"
+    assert headers["Sec-Fetch-Dest"] == "iframe"
+    assert headers["Sec-Fetch-Mode"] == "navigate"
+    assert headers["Sec-Fetch-Site"] == "cross-site"
+    assert headers["Upgrade-Insecure-Requests"] == "1"
+
+
 def test_parse_ortified_sources_prefers_current_episode(client: KinogoClient) -> None:
     html = """
     <script>

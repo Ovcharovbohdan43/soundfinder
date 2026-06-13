@@ -57,7 +57,7 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 - Cinemar может менять обфускацию HTML; парсер рассчитан на публичные ссылки плеера 1.
 - Для cinemar нужен заголовок `Referer` с Kinogo.
 - Если в Railway появится `Blocked Kinogo URL host`, добавь показанный хост или его безопасный suffix в `KINOGO_ALLOWED_HOST_SUFFIXES`.
-- Новый `api.ortified.ws` player может возвращать `410 Gone` на отдельные embed URL; при успешном чтении бот извлекает HLS из `player-venom` playlist.
+- Новый `api.ortified.ws` player может возвращать `410 Gone` на отдельные embed URL. Для player-запросов бот отправляет браузерные iframe headers (`Origin`, `Sec-Fetch-*`), а при успешном чтении извлекает HLS из `player-venom` playlist.
 
 ## Затронутые модули
 
@@ -79,3 +79,5 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 [2026-06-13] – Исправлено: добавлен текущий домен плеера `api.ortified.ws` в безопасный Kinogo/Cinemar allowlist.
 
 [2026-06-13] – Добавлено: fallback parser для `api.ortified.ws`/`player-venom`, который извлекает HLS-ссылки `*.interkh.com`.
+
+[2026-06-13] – Исправлено: player-запросы к `api.ortified.ws` теперь отправляются с браузерными iframe headers, чтобы снизить `HTTP 410 Gone` на Railway.

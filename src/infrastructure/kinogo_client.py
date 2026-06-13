@@ -265,15 +265,7 @@ class KinogoClient:
 
     def _read_text(self, url: str, *, referer: str | None = None) -> str:
         self._ensure_allowed_url(url)
-        headers = {
-            "User-Agent": self._user_agent(),
-            "Accept": "text/html,application/xhtml+xml",
-            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Cache-Control": "no-cache",
-            "Connection": "close",
-        }
-        if referer is not None:
-            headers["Referer"] = referer
+        headers = self._request_headers(referer=referer)
 
         last_error: HTTPError | URLError | TimeoutError | OSError | None = None
         for attempt in range(1, _READ_ATTEMPTS + 1):
@@ -294,6 +286,23 @@ class KinogoClient:
                     time.sleep(_READ_RETRY_DELAY_SECONDS)
 
         raise KinogoError("Failed to read Kinogo page") from last_error
+
+    def _request_headers(self, *, referer: str | None = None) -> dict[str, str]:
+        headers = {
+            "User-Agent": self._user_agent(),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Cache-Control": "no-cache",
+            "Connection": "close",
+            "Upgrade-Insecure-Requests": "1",
+        }
+        if referer is not None:
+            headers["Referer"] = referer
+            headers["Origin"] = self._origin_from_url(referer)
+            headers["Sec-Fetch-Dest"] = "iframe"
+            headers["Sec-Fetch-Mode"] = "navigate"
+            headers["Sec-Fetch-Site"] = "cross-site"
+        return headers
 
     def _normalize_page_url(self, href: str) -> str:
         if href.startswith("http://") or href.startswith("https://"):
@@ -370,6 +379,11 @@ class KinogoClient:
     def _last_regex_group(pattern: str, value: str) -> str | None:
         matches = re.findall(pattern, value, flags=re.DOTALL)
         return matches[-1] if matches else None
+
+    @staticmethod
+    def _origin_from_url(url: str) -> str:
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}"
 
     @staticmethod
     def _user_agent() -> str:
