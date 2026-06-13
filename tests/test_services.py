@@ -54,6 +54,7 @@ def make_settings(tmp_path: Path) -> Settings:
         movie_status_update_interval_seconds=5,
         kinogo_base_url="https://kinogo.family/",
         kinogo_timeout=15,
+        kinogo_allowed_host_suffixes=("kinogo.family", "cinemar.cc", "host.cinemap.cc"),
     )
 
 

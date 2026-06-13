@@ -35,7 +35,10 @@ TELEGRAM_MAX_MOVIE_MB=49
 MOVIE_STATUS_UPDATE_INTERVAL_SECONDS=5
 KINOGO_BASE_URL=https://kinogo.family/
 KINOGO_TIMEOUT=15
+KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cinemar.top,host.cinemap.cc,video.cinemap.cc,cfnd.cinemap.cc
 ```
+
+`KINOGO_ALLOWED_HOST_SUFFIXES` ограничивает домены, с которых можно читать страницу плеера и HLS-потоки. Если Kinogo сменит домен плеера, добавь новый suffix в этот список, например `cinemar.example`, не отключая проверку URL.
 
 ## Как тестировать
 
@@ -51,6 +54,7 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 - Полнометражные фильмы часто больше 49 MB и не пройдут лимит Telegram Bot API.
 - Cinemar может менять обфускацию HTML; парсер рассчитан на публичные ссылки плеера 1.
 - Для cinemar нужен заголовок `Referer` с Kinogo.
+- Если в Railway появится `Blocked Kinogo URL host`, добавь показанный хост или его безопасный suffix в `KINOGO_ALLOWED_HOST_SUFFIXES`.
 
 ## Затронутые модули
 
@@ -64,3 +68,5 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 ## Changelog
 
 [2026-06-13] – Добавлено: режим скачивания фильмов/сериалов через Kinogo + Cinemar player 1, отдельная очередь и документация.
+
+[2026-06-13] – Исправлено: allowlist доменов Kinogo/Cinemar теперь расширяется через `KINOGO_ALLOWED_HOST_SUFFIXES`, чтобы смена домена плеера не ломала загрузку.

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.infrastructure.kinogo_client import KinogoClient, KinogoKind
+from src.infrastructure.kinogo_client import KinogoClient, KinogoError, KinogoKind
 
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
@@ -38,6 +38,19 @@ def test_player_url_exists_in_movie_fixture() -> None:
     assert match is not None
     player_url = match.group(1) or match.group(2)
     assert player_url.startswith("https://cinemar.cc/embed/")
+
+
+def test_allowed_host_suffixes_can_be_extended() -> None:
+    client = KinogoClient(
+        base_url="https://kinogo.family/",
+        timeout=5,
+        allowed_host_suffixes=("cinemar.example",),
+    )
+
+    client._ensure_allowed_url("https://player.cinemar.example/embed/123")  # noqa: SLF001
+
+    with pytest.raises(KinogoError, match="not allowed"):
+        client._ensure_allowed_url("https://evil.example/embed/123")  # noqa: SLF001
 
 
 def test_parse_cinemar_sources_from_fixture(client: KinogoClient) -> None:

@@ -64,6 +64,7 @@ def test_load_settings_uses_fast_polling_defaults(
     monkeypatch.delenv("VIDEO_STATUS_UPDATE_INTERVAL_SECONDS", raising=False)
     monkeypatch.delenv("MOVIE_DOWNLOAD_ENABLED", raising=False)
     monkeypatch.delenv("KINOGO_TIMEOUT", raising=False)
+    monkeypatch.delenv("KINOGO_ALLOWED_HOST_SUFFIXES", raising=False)
     monkeypatch.delenv("IMUSIC_TIMEOUT", raising=False)
     monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
     for index in range(1, 6):
@@ -84,4 +85,25 @@ def test_load_settings_uses_fast_polling_defaults(
     assert settings.movie_download_enabled is True
     assert settings.telegram_max_movie_mb == 49
     assert settings.kinogo_timeout == 15
+    assert "cinemar.su" in settings.kinogo_allowed_host_suffixes
     assert settings.imusic_timeout == 8
+
+
+def test_load_settings_parses_kinogo_allowed_host_suffixes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BOT_TOKEN", "123:test")
+    monkeypatch.setenv("IMUSIC_FALLBACK_ENABLED", "true")
+    monkeypatch.setenv(
+        "KINOGO_ALLOWED_HOST_SUFFIXES",
+        "https://cinemar.example/, host.cinemap.cc, cinemar.example",
+    )
+    monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
+    for index in range(1, 6):
+        monkeypatch.delenv(f"YT_DLP_COOKIES_B64_{index}", raising=False)
+
+    settings = load_settings()
+
+    assert settings.kinogo_allowed_host_suffixes == ("cinemar.example", "host.cinemap.cc")

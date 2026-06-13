@@ -66,7 +66,11 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
         else None
     )
     kinogo_client = (
-        KinogoClient(base_url=settings.kinogo_base_url, timeout=settings.kinogo_timeout)
+        KinogoClient(
+            base_url=settings.kinogo_base_url,
+            timeout=settings.kinogo_timeout,
+            allowed_host_suffixes=settings.kinogo_allowed_host_suffixes,
+        )
         if settings.movie_download_enabled
         else None
     )

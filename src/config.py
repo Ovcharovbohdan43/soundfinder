@@ -50,6 +50,22 @@ def _parse_player_clients(raw_value: str | None) -> tuple[str, ...]:
     return clients
 
 
+def _parse_csv_hosts(name: str, raw_value: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
+    if raw_value is None or raw_value.strip() == "":
+        return default
+
+    hosts: list[str] = []
+    for item in raw_value.split(","):
+        host = item.strip().lower().removeprefix("http://").removeprefix("https://")
+        host = host.split("/", 1)[0].strip(".")
+        if host:
+            hosts.append(host)
+
+    if not hosts:
+        raise ConfigError(f"{name} must contain at least one host suffix")
+    return tuple(dict.fromkeys(hosts))
+
+
 def _count_ytdlp_cookie_chunks() -> int:
     pattern = re.compile(r"^YT_DLP_COOKIES_B64_(\d+)$")
     return sum(1 for name in os.environ if pattern.match(name))
@@ -133,6 +149,7 @@ class Settings:
     movie_status_update_interval_seconds: int
     kinogo_base_url: str
     kinogo_timeout: int
+    kinogo_allowed_host_suffixes: tuple[str, ...]
 
     @property
     def telegram_max_audio_bytes(self) -> int:
@@ -229,4 +246,18 @@ def load_settings() -> Settings:
         ),
         kinogo_base_url=os.getenv("KINOGO_BASE_URL", "https://kinogo.family/").strip(),
         kinogo_timeout=_get_int("KINOGO_TIMEOUT", 15, minimum=3),
+        kinogo_allowed_host_suffixes=_parse_csv_hosts(
+            "KINOGO_ALLOWED_HOST_SUFFIXES",
+            os.getenv("KINOGO_ALLOWED_HOST_SUFFIXES"),
+            (
+                "kinogo.family",
+                "cinemar.cc",
+                "cinemar.su",
+                "cinemar.one",
+                "cinemar.top",
+                "host.cinemap.cc",
+                "video.cinemap.cc",
+                "cfnd.cinemap.cc",
+            ),
+        ),
     )

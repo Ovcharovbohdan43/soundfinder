@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-13] - Исправлено: Kinogo/Cinemar URL allowlist теперь расширяется через `KINOGO_ALLOWED_HOST_SUFFIXES`, а заблокированный хост пишется в лог.
+
 [2026-06-13] - Добавлено: режим `Скачать фильм/сериал` с поиском Kinogo, выбором качества из плеера 1, скачиванием через ffmpeg и отдельным movie limiter.
 
 [2026-06-13] - Добавлено: menu-based YouTube video mode with a separate limiter, progress spinner/ETA, and best available video+audio download within Telegram Bot API upload limits.

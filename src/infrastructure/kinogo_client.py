@@ -4,6 +4,7 @@ import base64
 import html
 import logging
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 from urllib.error import HTTPError, URLError
@@ -12,9 +13,12 @@ from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
-_ALLOWED_HOST_SUFFIXES = (
+DEFAULT_ALLOWED_HOST_SUFFIXES = (
     "kinogo.family",
     "cinemar.cc",
+    "cinemar.su",
+    "cinemar.one",
+    "cinemar.top",
     "host.cinemap.cc",
     "video.cinemap.cc",
     "cfnd.cinemap.cc",
@@ -54,12 +58,21 @@ class KinogoSource:
 
 
 class KinogoClient:
-    def __init__(self, *, base_url: str, timeout: int) -> None:
+    def __init__(
+        self,
+        *,
+        base_url: str,
+        timeout: int,
+        allowed_host_suffixes: Iterable[str] | None = None,
+    ) -> None:
         self._base_url = base_url.rstrip("/") + "/"
         self._timeout = timeout
         self._referer = self._base_url
         parsed = urlparse(self._base_url)
         self._allowed_host = parsed.netloc.lower()
+        self._allowed_host_suffixes = self._normalize_allowed_host_suffixes(
+            allowed_host_suffixes or DEFAULT_ALLOWED_HOST_SUFFIXES
+        )
 
     def search(self, query: str, *, limit: int) -> list[KinogoSearchResult]:
         search_url = urljoin(
@@ -218,9 +231,20 @@ class KinogoClient:
         if not host:
             raise KinogoError("URL host is missing")
         if host != self._allowed_host and not any(
-            host == allowed or host.endswith(f".{allowed}") for allowed in _ALLOWED_HOST_SUFFIXES
+            host == allowed or host.endswith(f".{allowed}") for allowed in self._allowed_host_suffixes
         ):
+            logger.warning("Blocked Kinogo URL host: %s", host)
             raise KinogoError("URL host is not allowed for Kinogo downloads")
+
+    @staticmethod
+    def _normalize_allowed_host_suffixes(values: Iterable[str]) -> tuple[str, ...]:
+        suffixes: list[str] = []
+        for value in values:
+            suffix = value.strip().lower().removeprefix("http://").removeprefix("https://")
+            suffix = suffix.split("/", 1)[0].strip(".")
+            if suffix:
+                suffixes.append(suffix)
+        return tuple(dict.fromkeys(suffixes))
 
     @staticmethod
     def _decode_json_unicode(value: str) -> str:
