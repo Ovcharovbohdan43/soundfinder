@@ -12,7 +12,7 @@
 2. Бот ищет результаты на `kinogo.family`.
 3. Пользователь выбирает фильм/сериал из пагинированного списка.
 4. `KinogoClient` одним чтением получает название страницы и URL плеера 1 (`cinemar.cc/embed/...`).
-5. Из HTML плеера извлекаются доступные HLS-ссылки (`host.cinemap.cc/...m3u8`).
+5. Из HTML плеера извлекаются доступные HLS-ссылки (`host.cinemap.cc/...m3u8` или `*.interkh.com/.../master.m3u8`).
 6. Пользователь выбирает качество.
 7. `MovieDownloadService` скачивает поток через `ffmpeg` с `Referer: kinogo.family`.
 8. Если файл проходит лимит `TELEGRAM_MAX_MOVIE_MB`, бот отправляет его как video/document.
@@ -35,7 +35,7 @@ TELEGRAM_MAX_MOVIE_MB=49
 MOVIE_STATUS_UPDATE_INTERVAL_SECONDS=5
 KINOGO_BASE_URL=https://kinogo.family/
 KINOGO_TIMEOUT=15
-KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cinemar.top,api.ortified.ws,host.cinemap.cc,video.cinemap.cc,cfnd.cinemap.cc
+KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cinemar.top,api.ortified.ws,interkh.com,host.cinemap.cc,video.cinemap.cc,cfnd.cinemap.cc
 ```
 
 `KINOGO_ALLOWED_HOST_SUFFIXES` ограничивает домены, с которых можно читать страницу плеера и HLS-потоки. Если Kinogo сменит домен плеера, добавь новый suffix в этот список, например `cinemar.example`, не отключая проверку URL.
@@ -57,6 +57,7 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 - Cinemar может менять обфускацию HTML; парсер рассчитан на публичные ссылки плеера 1.
 - Для cinemar нужен заголовок `Referer` с Kinogo.
 - Если в Railway появится `Blocked Kinogo URL host`, добавь показанный хост или его безопасный suffix в `KINOGO_ALLOWED_HOST_SUFFIXES`.
+- Новый `api.ortified.ws` player может возвращать `410 Gone` на отдельные embed URL; при успешном чтении бот извлекает HLS из `player-venom` playlist.
 
 ## Затронутые модули
 
@@ -76,3 +77,5 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 [2026-06-13] – Исправлено: выбор фильма больше не делает два параллельных запроса к одной Kinogo-странице; добавлен retry и URL-логирование при сетевых timeout.
 
 [2026-06-13] – Исправлено: добавлен текущий домен плеера `api.ortified.ws` в безопасный Kinogo/Cinemar allowlist.
+
+[2026-06-13] – Добавлено: fallback parser для `api.ortified.ws`/`player-venom`, который извлекает HLS-ссылки `*.interkh.com`.

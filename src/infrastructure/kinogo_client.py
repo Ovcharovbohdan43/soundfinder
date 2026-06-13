@@ -21,6 +21,7 @@ DEFAULT_ALLOWED_HOST_SUFFIXES = (
     "cinemar.one",
     "cinemar.top",
     "api.ortified.ws",
+    "interkh.com",
     "host.cinemap.cc",
     "video.cinemap.cc",
     "cfnd.cinemap.cc",
@@ -152,12 +153,12 @@ class KinogoClient:
     def _parse_cinemar_sources(self, html_text: str) -> list[KinogoSource]:
         match = re.search(r'"file":"((?:\\.|[^"\\])*)"', html_text)
         if match is None:
-            return []
+            return self._parse_ortified_sources(html_text)
 
         payload = match.group(1).encode().decode("unicode_escape")
         start = payload.find("W3s")
         if start < 0:
-            return []
+            return self._parse_ortified_sources(html_text)
 
         decoded_text = self._decode_cinemar_payload(payload[start:])
         sources: list[KinogoSource] = []
@@ -177,7 +178,62 @@ class KinogoClient:
                 )
             )
             seen_urls.add(stream_url)
+        return sources or self._parse_ortified_sources(html_text)
+
+    def _parse_ortified_sources(self, html_text: str) -> list[KinogoSource]:
+        current = self._parse_ortified_current_episode(html_text)
+        current_sources = self._collect_ortified_sources(html_text, current=current)
+        if current_sources:
+            return current_sources
+        return self._collect_ortified_sources(html_text, current=None)
+
+    def _collect_ortified_sources(
+        self,
+        html_text: str,
+        *,
+        current: tuple[str, str] | None,
+    ) -> list[KinogoSource]:
+        sources: list[KinogoSource] = []
+        seen_urls: set[str] = set()
+        for match in re.finditer(r'"hls":"((?:\\.|[^"\\])*)"', html_text):
+            before = html_text[max(0, match.start() - 2500) : match.start()]
+            episode = self._last_regex_group(r'"episode":"((?:\\.|[^"\\])*)"', before)
+            season = self._last_regex_group(r'"season":(\d+)', before)
+            if current is not None and (season, episode) != current:
+                continue
+
+            stream_url = self._normalize_stream_url(match.group(1))
+            if stream_url is None or stream_url in seen_urls:
+                continue
+
+            after = html_text[match.end() : match.end() + 3500]
+            title_raw = self._first_regex_group(r'"title":"((?:\\.|[^"\\])*)"', after)
+            title = self._decode_json_unicode(title_raw or "").strip()
+            title = re.sub(r"<[^>]+>", "", title).strip()
+            if not title and season and episode:
+                title = f"Сезон {season}, серия {episode}"
+            title = title or "HLS"
+
+            duration_raw = self._first_regex_group(r'"duration":(\d+)', after)
+            sources.append(
+                KinogoSource(
+                    title=title,
+                    stream_url=stream_url,
+                    duration_seconds=int(duration_raw) if duration_raw else None,
+                )
+            )
+            seen_urls.add(stream_url)
         return sources
+
+    def _parse_ortified_current_episode(self, html_text: str) -> tuple[str, str] | None:
+        match = re.search(
+            r"current:\s*\{\s*season:\s*(\d+)\s*,\s*episode:\s*[\"']?([^\"'\s,}]+)",
+            html_text,
+            flags=re.DOTALL,
+        )
+        if match is None:
+            return None
+        return match.group(1), match.group(2)
 
     def _decode_cinemar_payload(self, payload: str) -> str:
         cleaned = re.sub(r"&[A-Za-z0-9]*?0fb(?:9f|[A-Za-z0-9]{1,3})", "", payload)
@@ -304,6 +360,16 @@ class KinogoClient:
         if not parsed.query:
             return url
         return parsed._replace(query="...").geturl()
+
+    @staticmethod
+    def _first_regex_group(pattern: str, value: str) -> str | None:
+        match = re.search(pattern, value, flags=re.DOTALL)
+        return match.group(1) if match is not None else None
+
+    @staticmethod
+    def _last_regex_group(pattern: str, value: str) -> str | None:
+        matches = re.findall(pattern, value, flags=re.DOTALL)
+        return matches[-1] if matches else None
 
     @staticmethod
     def _user_agent() -> str:

@@ -65,6 +65,33 @@ def test_allowed_host_suffixes_can_be_extended() -> None:
 
 def test_default_allowed_hosts_include_current_ortified_player(client: KinogoClient) -> None:
     client._ensure_allowed_url("https://api.ortified.ws/embed/123")  # noqa: SLF001
+    client._ensure_allowed_url("https://cdn-1.interkh.com/movie/master.m3u8")  # noqa: SLF001
+
+
+def test_parse_ortified_sources_prefers_current_episode(client: KinogoClient) -> None:
+    html = """
+    <script>
+    makePlayer({
+        playlist: {
+            current: { season: 2, episode: "3" },
+            seasons: [{
+                "season":2,
+                "episodes":[
+                    {"episode":"2","hls":"https://cdn.interkh.com/s2e2/master.m3u8","duration":1200,"title":"Episode 2"},
+                    {"episode":"3","hls":"https://cdn.interkh.com/s2e3/master.m3u8","duration":1300,"title":"Episode 3"}
+                ]
+            }]
+        }
+    });
+    </script>
+    """
+
+    sources = client._parse_cinemar_sources(html)  # noqa: SLF001
+
+    assert len(sources) == 1
+    assert sources[0].title == "Episode 3"
+    assert sources[0].duration_seconds == 1300
+    assert sources[0].stream_url == "https://cdn.interkh.com/s2e3/master.m3u8"
 
 
 def test_parse_cinemar_sources_from_fixture(client: KinogoClient) -> None:

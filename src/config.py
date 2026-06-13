@@ -256,6 +256,7 @@ def load_settings() -> Settings:
                 "cinemar.one",
                 "cinemar.top",
                 "api.ortified.ws",
+                "interkh.com",
                 "host.cinemap.cc",
                 "video.cinemap.cc",
                 "cfnd.cinemap.cc",
