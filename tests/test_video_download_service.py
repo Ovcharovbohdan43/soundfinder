@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from src.infrastructure.yt_dlp_client import YtDlpError, classify_yt_dlp_error
+from src.infrastructure.yt_dlp_client import (
+    YtDlpBotBlockedError,
+    YtDlpError,
+    classify_yt_dlp_error,
+)
 from src.services.video_download_service import VideoDownloadProgress
 
 
@@ -28,3 +32,9 @@ def test_yt_dlp_filesize_error_is_preserved() -> None:
 
     assert isinstance(error, YtDlpError)
     assert "filesize limit" in str(error)
+
+
+def test_yt_dlp_bot_block_is_classified() -> None:
+    error = classify_yt_dlp_error(RuntimeError("Sign in to confirm you’re not a bot"))
+
+    assert isinstance(error, YtDlpBotBlockedError)

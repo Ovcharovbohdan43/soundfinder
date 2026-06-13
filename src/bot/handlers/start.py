@@ -4,7 +4,7 @@ from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
-from src.bot.ui import MUSIC_MODE_BUTTON, YOUTUBE_VIDEO_MODE_BUTTON, main_menu_keyboard
+from src.bot.ui import MOVIE_MODE_BUTTON, MUSIC_MODE_BUTTON, YOUTUBE_VIDEO_MODE_BUTTON, main_menu_keyboard
 from src.infrastructure.user_mode_store import UserMode
 from src.services.container import AppServices
 
@@ -12,12 +12,13 @@ router = Router()
 
 
 START_TEXT = """
-Привет. Я умею искать музыку и скачивать YouTube-видео.
+Привет. Я умею искать музыку, скачивать YouTube-видео и фильмы/сериалы.
 
 Как пользоваться:
 1. Выбери раздел в меню.
 2. Для музыки напиши название трека или исполнителя.
 3. Для YouTube-видео отправь ссылку на ролик.
+4. Для фильмов напиши название и выбери качество.
 
 Команды: /help, /terms.
 """.strip()
@@ -29,9 +30,9 @@ imagine dragons believer
 
 Ограничения:
 - слишком длинные треки не показываются;
-- аудио больше лимита Telegram не отправляется;
-- музыка и видео скачиваются в разных очередях;
-- YouTube-видео отправляется в максимальном доступном качестве со звуком, если размер проходит лимит Telegram.
+- аудио и видео больше лимита Telegram не отправляется;
+- музыка, YouTube-видео и фильмы скачиваются в разных очередях;
+- полнометражные фильмы часто больше лимита Telegram Bot API.
 """.strip()
 
 
@@ -75,5 +76,15 @@ async def youtube_video_mode_handler(message: Message, services: AppServices) ->
     services.modes.set(user_id, UserMode.YOUTUBE_VIDEO)
     await message.answer(
         "Раздел YouTube-видео включён. Отправь ссылку на ролик.",
+        reply_markup=main_menu_keyboard(),
+    )
+
+
+@router.message(F.text == MOVIE_MODE_BUTTON)
+async def movie_mode_handler(message: Message, services: AppServices) -> None:
+    user_id = message.from_user.id if message.from_user else message.chat.id
+    services.modes.set(user_id, UserMode.MOVIE)
+    await message.answer(
+        "Раздел фильмов включён. Напиши название фильма или сериала.",
         reply_markup=main_menu_keyboard(),
     )

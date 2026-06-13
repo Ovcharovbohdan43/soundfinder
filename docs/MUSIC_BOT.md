@@ -2,7 +2,7 @@
 
 ## Назначение
 
-Бот принимает текстовый поисковый запрос в Telegram, находит несколько аудио-кандидатов через `two.imusic.fm`, дает пользователю выбрать результат и отправляет выбранный трек как Telegram audio. В меню также есть отдельный раздел для скачивания YouTube-видео в максимальном доступном качестве со звуком. YouTube-поиск музыки по умолчанию **не используется**; резервный YouTube-поиск включается только через `YOUTUBE_SEARCH_ENABLED=true`.
+Бот принимает текстовый поисковый запрос в Telegram, находит несколько аудио-кандидатов через `two.imusic.fm`, дает пользователю выбрать результат и отправляет выбранный трек как Telegram audio. В меню также есть отдельный раздел для скачивания YouTube-видео и режим `Скачать фильм/сериал` через Kinogo. YouTube-поиск музыки по умолчанию **не используется**; резервный YouTube-поиск включается только через `YOUTUBE_SEARCH_ENABLED=true`.
 
 ## Детальное описание
 
@@ -31,6 +31,16 @@
 4. `YtDlpClient` скачивает лучший доступный формат, где уже есть видео и звук, с приоритетом MP4.
 5. Пока идёт скачивание, bot message обновляется со спинером, процентом и примерным ETA.
 6. Если итоговый файл проходит лимит `TELEGRAM_MAX_VIDEO_MB`, бот отправляет его как Telegram video.
+
+Поток фильмов/сериалов:
+
+1. Пользователь выбирает `Скачать фильм/сериал`.
+2. `KinogoClient` ищет результаты и показывает пагинированный список.
+3. После выбора карточки бот читает плеер 1 и показывает доступные качества.
+4. `MovieDownloadService` скачивает HLS через `ffmpeg` в отдельной `movie_limiter` очереди.
+5. Если файл проходит `TELEGRAM_MAX_MOVIE_MB`, бот отправляет его в Telegram.
+
+Подробнее: [MOVIE_DOWNLOADS.md](MOVIE_DOWNLOADS.md).
 
 ## Как использовать
 
@@ -71,6 +81,13 @@ TELEGRAM_TASKS_CONCURRENCY_LIMIT=20
 DIRECT_TELEGRAM_AUDIO_URL_ENABLED=true
 YOUTUBE_VIDEO_DOWNLOAD_ENABLED=true
 VIDEO_STATUS_UPDATE_INTERVAL_SECONDS=5
+MOVIE_DOWNLOAD_ENABLED=true
+MAX_CONCURRENT_MOVIE_DOWNLOADS=1
+MAX_ACTIVE_MOVIE_DOWNLOADS_PER_USER=1
+TELEGRAM_MAX_MOVIE_MB=49
+MOVIE_STATUS_UPDATE_INTERVAL_SECONDS=5
+KINOGO_BASE_URL=https://kinogo.family/
+KINOGO_TIMEOUT=15
 PREFERRED_AUDIO_CODEC=mp3
 IMUSIC_FALLBACK_ENABLED=true
 IMUSIC_BASE_URL=https://two.imusic.fm/

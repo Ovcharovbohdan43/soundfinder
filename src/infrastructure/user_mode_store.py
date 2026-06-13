@@ -6,6 +6,7 @@ from enum import StrEnum
 class UserMode(StrEnum):
     MUSIC = "music"
     YOUTUBE_VIDEO = "youtube_video"
+    MOVIE = "movie"
 
 
 class UserModeStore:

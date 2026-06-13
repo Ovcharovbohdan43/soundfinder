@@ -47,6 +47,13 @@ def make_settings(tmp_path: Path) -> Settings:
         direct_telegram_audio_url_enabled=True,
         youtube_video_download_enabled=True,
         video_status_update_interval_seconds=5,
+        movie_download_enabled=True,
+        max_concurrent_movie_downloads=1,
+        max_active_movie_downloads_per_user=1,
+        telegram_max_movie_mb=49,
+        movie_status_update_interval_seconds=5,
+        kinogo_base_url="https://kinogo.family/",
+        kinogo_timeout=15,
     )
 
 

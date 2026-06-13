@@ -19,6 +19,20 @@ class YtDlpBotBlockedError(YtDlpError):
     pass
 
 
+class _YtDlpLogger:
+    def debug(self, msg: str) -> None:
+        logger.debug("%s", msg)
+
+    def info(self, msg: str) -> None:
+        logger.debug("%s", msg)
+
+    def warning(self, msg: str) -> None:
+        logger.warning("%s", msg)
+
+    def error(self, msg: str) -> None:
+        logger.debug("%s", msg)
+
+
 def classify_yt_dlp_error(exc: Exception) -> YtDlpError:
     message = str(exc).lower()
     bot_markers = (
@@ -66,6 +80,7 @@ class YtDlpClient:
         options: dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
+            "logger": _YtDlpLogger(),
             "socket_timeout": self._socket_timeout,
             "retries": 3,
             "fragment_retries": 3,

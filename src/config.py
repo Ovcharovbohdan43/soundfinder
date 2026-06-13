@@ -126,6 +126,13 @@ class Settings:
     direct_telegram_audio_url_enabled: bool
     youtube_video_download_enabled: bool
     video_status_update_interval_seconds: int
+    movie_download_enabled: bool
+    max_concurrent_movie_downloads: int
+    max_active_movie_downloads_per_user: int
+    telegram_max_movie_mb: int
+    movie_status_update_interval_seconds: int
+    kinogo_base_url: str
+    kinogo_timeout: int
 
     @property
     def telegram_max_audio_bytes(self) -> int:
@@ -134,6 +141,10 @@ class Settings:
     @property
     def telegram_max_video_bytes(self) -> int:
         return self.telegram_max_video_mb * 1024 * 1024
+
+    @property
+    def telegram_max_movie_bytes(self) -> int:
+        return self.telegram_max_movie_mb * 1024 * 1024
 
 
 def load_settings() -> Settings:
@@ -203,4 +214,19 @@ def load_settings() -> Settings:
             5,
             minimum=2,
         ),
+        movie_download_enabled=_get_bool("MOVIE_DOWNLOAD_ENABLED", True),
+        max_concurrent_movie_downloads=_get_int("MAX_CONCURRENT_MOVIE_DOWNLOADS", 1, minimum=1),
+        max_active_movie_downloads_per_user=_get_int(
+            "MAX_ACTIVE_MOVIE_DOWNLOADS_PER_USER",
+            1,
+            minimum=1,
+        ),
+        telegram_max_movie_mb=_get_int("TELEGRAM_MAX_MOVIE_MB", 49, minimum=1),
+        movie_status_update_interval_seconds=_get_int(
+            "MOVIE_STATUS_UPDATE_INTERVAL_SECONDS",
+            5,
+            minimum=2,
+        ),
+        kinogo_base_url=os.getenv("KINOGO_BASE_URL", "https://kinogo.family/").strip(),
+        kinogo_timeout=_get_int("KINOGO_TIMEOUT", 15, minimum=3),
     )

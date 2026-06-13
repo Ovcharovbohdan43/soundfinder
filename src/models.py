@@ -41,6 +41,14 @@ class DownloadedVideo:
 
 
 @dataclass(frozen=True)
+class DownloadedMovie:
+    path: Path
+    title: str
+    duration: int | None
+    size_bytes: int
+
+
+@dataclass(frozen=True)
 class CachedAudio:
     source_id: str
     telegram_file_id: str

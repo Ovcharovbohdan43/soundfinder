@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from src.config import Settings
-from src.infrastructure.yt_dlp_client import YtDlpClient, YtDlpError
+from src.infrastructure.yt_dlp_client import YtDlpBotBlockedError, YtDlpClient, YtDlpError
 from src.models import DownloadedVideo
 
 
@@ -18,6 +18,10 @@ class VideoDownloadError(RuntimeError):
 
 
 class VideoTooLargeError(VideoDownloadError):
+    pass
+
+
+class VideoBotBlockedError(VideoDownloadError):
     pass
 
 
@@ -76,6 +80,9 @@ class VideoDownloadService:
                 max_filesize_bytes=self._settings.telegram_max_video_bytes,
                 progress_hook=progress.hook,
             )
+        except YtDlpBotBlockedError as exc:
+            shutil.rmtree(work_dir, ignore_errors=True)
+            raise VideoBotBlockedError("YouTube blocked this server IP") from exc
         except YtDlpError as exc:
             shutil.rmtree(work_dir, ignore_errors=True)
             message = str(exc).lower()

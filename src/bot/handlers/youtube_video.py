@@ -9,12 +9,13 @@ from aiogram import F, Router
 from aiogram.types import FSInputFile, Message
 
 from src.bot.handlers.search import BOT_CAPTION
-from src.bot.ui import MUSIC_MODE_BUTTON, YOUTUBE_VIDEO_MODE_BUTTON
+from src.bot.ui import MOVIE_MODE_BUTTON, MUSIC_MODE_BUTTON, YOUTUBE_VIDEO_MODE_BUTTON
 from src.config import Settings
 from src.infrastructure.rate_limit import RateLimitExceeded
 from src.infrastructure.user_mode_store import UserMode
 from src.services.container import AppServices
 from src.services.video_download_service import (
+    VideoBotBlockedError,
     VideoDownloadError,
     VideoDownloadProgress,
     VideoTooLargeError,
@@ -33,7 +34,7 @@ async def youtube_video_handler(message: Message, services: AppServices, setting
     user_id = message.from_user.id if message.from_user else message.chat.id
     if services.modes.get(user_id) != UserMode.YOUTUBE_VIDEO:
         return
-    if message.text in {MUSIC_MODE_BUTTON, YOUTUBE_VIDEO_MODE_BUTTON}:
+    if message.text in {MUSIC_MODE_BUTTON, YOUTUBE_VIDEO_MODE_BUTTON, MOVIE_MODE_BUTTON}:
         return
     if not settings.youtube_video_download_enabled:
         await message.answer("Раздел YouTube-видео сейчас выключен.")
@@ -87,6 +88,12 @@ async def youtube_video_handler(message: Message, services: AppServices, setting
         await status_message.edit_text(
             f"Видео в лучшем доступном качестве со звуком больше "
             f"{settings.telegram_max_video_mb} MB. Telegram Bot API не примет такой файл."
+        )
+    except VideoBotBlockedError:
+        logger.warning("YouTube blocked video download from this server IP")
+        await _stop_status(status_task, stop_status)
+        await status_message.edit_text(
+            "YouTube временно не даёт скачать видео с сервера. Нужны YouTube cookies в Railway."
         )
     except VideoDownloadError:
         logger.exception("YouTube video download failed")

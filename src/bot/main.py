@@ -9,10 +9,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from src.bot.handlers import search, start, youtube_video
+from src.bot.handlers import movie, search, start, youtube_video
 from src.config import ConfigError, Settings, load_settings
 from src.infrastructure.audio_cache import AudioCache
 from src.infrastructure.imusic_client import IMusicClient
+from src.infrastructure.kinogo_client import KinogoClient
+from src.infrastructure.movie_session_store import MovieSessionStore
 from src.infrastructure.rate_limit import DownloadLimiter
 from src.infrastructure.single_instance import SingleInstanceLock, SingleInstanceLockError
 from src.infrastructure.session_store import SearchSessionStore
@@ -21,6 +23,7 @@ from src.infrastructure.youtube_cookies import prepare_youtube_cookies
 from src.infrastructure.yt_dlp_client import YtDlpClient
 from src.services.container import AppServices
 from src.services.download_service import DownloadService
+from src.services.movie_download_service import MovieDownloadService
 from src.services.search_service import SearchService
 from src.services.video_download_service import VideoDownloadService
 
@@ -62,6 +65,11 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
         if settings.imusic_fallback_enabled
         else None
     )
+    kinogo_client = (
+        KinogoClient(base_url=settings.kinogo_base_url, timeout=settings.kinogo_timeout)
+        if settings.movie_download_enabled
+        else None
+    )
     cache = AudioCache(settings.cache_db_path)
     await cache.init()
 
@@ -80,6 +88,11 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
             client=yt_dlp_client,
             settings=settings,
         ),
+        movie_download=(
+            MovieDownloadService(settings=settings, referer=settings.kinogo_base_url)
+            if kinogo_client is not None
+            else None
+        ),
         cache=cache,
         limiter=DownloadLimiter(
             global_limit=settings.max_concurrent_downloads,
@@ -89,8 +102,14 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
             global_limit=settings.max_concurrent_video_downloads,
             per_user_limit=settings.max_active_video_downloads_per_user,
         ),
+        movie_limiter=DownloadLimiter(
+            global_limit=settings.max_concurrent_movie_downloads,
+            per_user_limit=settings.max_active_movie_downloads_per_user,
+        ),
         sessions=SearchSessionStore(),
+        movie_sessions=MovieSessionStore(),
         modes=UserModeStore(),
+        kinogo=kinogo_client,
     )
     return services, cookies_path
 
@@ -111,6 +130,7 @@ async def main() -> None:
     )
     dispatcher = Dispatcher(services=services, settings=settings)
     dispatcher.include_router(start.router)
+    dispatcher.include_router(movie.router)
     dispatcher.include_router(youtube_video.router)
     dispatcher.include_router(search.router)
 
@@ -131,10 +151,11 @@ async def main() -> None:
 
         await bot.delete_webhook(drop_pending_updates=True)
         logger.info(
-            "Music bot started in polling mode (imusic=%s, youtube_search=%s, youtube_video=%s, lock=%s)",
+            "Music bot started in polling mode (imusic=%s, youtube_search=%s, youtube_video=%s, movie=%s, lock=%s)",
             "yes" if settings.imusic_fallback_enabled else "no",
             "yes" if settings.youtube_search_enabled else "no",
             "yes" if settings.youtube_video_download_enabled else "no",
+            "yes" if settings.movie_download_enabled else "no",
             "yes" if instance_lock is not None else "no",
         )
         await dispatcher.start_polling(

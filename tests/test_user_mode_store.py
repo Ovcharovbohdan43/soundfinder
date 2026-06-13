@@ -16,3 +16,11 @@ def test_user_mode_can_switch_to_youtube_video() -> None:
 
     assert store.get(100) == UserMode.YOUTUBE_VIDEO
     assert store.get(200) == UserMode.MUSIC
+
+
+def test_user_mode_can_switch_to_movie() -> None:
+    store = UserModeStore()
+
+    store.set(100, UserMode.MOVIE)
+
+    assert store.get(100) == UserMode.MOVIE

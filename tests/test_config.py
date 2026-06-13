@@ -62,6 +62,8 @@ def test_load_settings_uses_fast_polling_defaults(
     monkeypatch.delenv("DIRECT_TELEGRAM_AUDIO_URL_ENABLED", raising=False)
     monkeypatch.delenv("YOUTUBE_VIDEO_DOWNLOAD_ENABLED", raising=False)
     monkeypatch.delenv("VIDEO_STATUS_UPDATE_INTERVAL_SECONDS", raising=False)
+    monkeypatch.delenv("MOVIE_DOWNLOAD_ENABLED", raising=False)
+    monkeypatch.delenv("KINOGO_TIMEOUT", raising=False)
     monkeypatch.delenv("IMUSIC_TIMEOUT", raising=False)
     monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
     for index in range(1, 6):
@@ -79,4 +81,7 @@ def test_load_settings_uses_fast_polling_defaults(
     assert settings.direct_telegram_audio_url_enabled is True
     assert settings.telegram_max_video_mb == 49
     assert settings.video_status_update_interval_seconds == 5
+    assert settings.movie_download_enabled is True
+    assert settings.telegram_max_movie_mb == 49
+    assert settings.kinogo_timeout == 15
     assert settings.imusic_timeout == 8
