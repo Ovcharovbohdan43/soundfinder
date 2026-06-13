@@ -20,6 +20,7 @@ DEFAULT_ALLOWED_HOST_SUFFIXES = (
     "cinemar.su",
     "cinemar.one",
     "cinemar.top",
+    "api.ortified.ws",
     "host.cinemap.cc",
     "video.cinemap.cc",
     "cfnd.cinemap.cc",

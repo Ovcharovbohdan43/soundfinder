@@ -63,6 +63,10 @@ def test_allowed_host_suffixes_can_be_extended() -> None:
         client._ensure_allowed_url("https://evil.example/embed/123")  # noqa: SLF001
 
 
+def test_default_allowed_hosts_include_current_ortified_player(client: KinogoClient) -> None:
+    client._ensure_allowed_url("https://api.ortified.ws/embed/123")  # noqa: SLF001
+
+
 def test_parse_cinemar_sources_from_fixture(client: KinogoClient) -> None:
     html = (FIXTURES_DIR / "cinemar_player.html").read_text(encoding="utf-8")
 

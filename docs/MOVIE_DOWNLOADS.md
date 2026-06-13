@@ -35,7 +35,7 @@ TELEGRAM_MAX_MOVIE_MB=49
 MOVIE_STATUS_UPDATE_INTERVAL_SECONDS=5
 KINOGO_BASE_URL=https://kinogo.family/
 KINOGO_TIMEOUT=15
-KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cinemar.top,host.cinemap.cc,video.cinemap.cc,cfnd.cinemap.cc
+KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cinemar.top,api.ortified.ws,host.cinemap.cc,video.cinemap.cc,cfnd.cinemap.cc
 ```
 
 `KINOGO_ALLOWED_HOST_SUFFIXES` ограничивает домены, с которых можно читать страницу плеера и HLS-потоки. Если Kinogo сменит домен плеера, добавь новый suffix в этот список, например `cinemar.example`, не отключая проверку URL.
@@ -74,3 +74,5 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 [2026-06-13] – Исправлено: allowlist доменов Kinogo/Cinemar теперь расширяется через `KINOGO_ALLOWED_HOST_SUFFIXES`, чтобы смена домена плеера не ломала загрузку.
 
 [2026-06-13] – Исправлено: выбор фильма больше не делает два параллельных запроса к одной Kinogo-странице; добавлен retry и URL-логирование при сетевых timeout.
+
+[2026-06-13] – Исправлено: добавлен текущий домен плеера `api.ortified.ws` в безопасный Kinogo/Cinemar allowlist.

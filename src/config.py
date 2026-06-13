@@ -255,6 +255,7 @@ def load_settings() -> Settings:
                 "cinemar.su",
                 "cinemar.one",
                 "cinemar.top",
+                "api.ortified.ws",
                 "host.cinemap.cc",
                 "video.cinemap.cc",
                 "cfnd.cinemap.cc",

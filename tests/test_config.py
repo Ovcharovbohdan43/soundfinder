@@ -86,6 +86,7 @@ def test_load_settings_uses_fast_polling_defaults(
     assert settings.telegram_max_movie_mb == 49
     assert settings.kinogo_timeout == 15
     assert "cinemar.su" in settings.kinogo_allowed_host_suffixes
+    assert "api.ortified.ws" in settings.kinogo_allowed_host_suffixes
     assert settings.imusic_timeout == 8
 
 

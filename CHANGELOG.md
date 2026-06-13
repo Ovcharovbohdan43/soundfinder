@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-13] - Исправлено: добавлен текущий домен Kinogo player 1 `api.ortified.ws` в безопасный URL allowlist.
+
 [2026-06-13] - Исправлено: выбор фильма в Kinogo mode больше не делает два параллельных запроса к одной странице; добавлены retry и URL-логирование при timeout.
 
 [2026-06-13] - Исправлено: Kinogo/Cinemar URL allowlist теперь расширяется через `KINOGO_ALLOWED_HOST_SUFFIXES`, а заблокированный хост пишется в лог.
