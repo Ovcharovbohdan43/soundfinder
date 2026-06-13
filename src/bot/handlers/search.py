@@ -9,6 +9,7 @@ from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, Inli
 
 from src.config import Settings
 from src.infrastructure.rate_limit import RateLimitExceeded
+from src.infrastructure.user_mode_store import UserMode
 from src.models import SearchResult
 from src.services.container import AppServices
 from src.services.download_service import AudioDurationError, AudioTooLargeError, DownloadFallbackError
@@ -112,6 +113,9 @@ async def search_handler(message: Message, services: AppServices, settings: Sett
         return
 
     user_id = message.from_user.id if message.from_user else message.chat.id
+    if services.modes.get(user_id) != UserMode.MUSIC:
+        return
+
     status_message = await message.answer("Ищу подходящие треки...")
 
     try:

@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-13] - Добавлено: menu-based YouTube video mode with a separate limiter, progress spinner/ETA, and best available video+audio download within Telegram Bot API upload limits.
+
 [2026-06-10] - Добавлено: direct Telegram audio URL delivery with automatic fallback to server-side download for faster first sends.
 
 [2026-06-10] - Добавлено: paginated search results with `Назад`/`Дальше` navigation and separate `SEARCH_RESULTS_PAGE_SIZE` setting.

@@ -53,14 +53,19 @@ python -m src.bot.main
 ## Переменные окружения
 
 - `BOT_TOKEN`: обязательный токен Telegram Bot API.
-- `TELEGRAM_MAX_AUDIO_MB`: лимит отправляемого файла, по умолчанию 49.
+- `TELEGRAM_MAX_AUDIO_MB`: лимит отправляемого аудиофайла, по умолчанию 49.
+- `TELEGRAM_MAX_VIDEO_MB`: лимит отправляемого видеофайла, по умолчанию 49.
 - `SEARCH_RESULTS_LIMIT`: максимум найденных вариантов по запросу.
 - `SEARCH_RESULTS_PAGE_SIZE`: количество кнопок с треками на одной странице выдачи.
 - `MAX_QUERY_LENGTH`: максимальная длина пользовательского запроса.
 - `MAX_DURATION_SECONDS`: максимальная длительность трека.
 - `MAX_CONCURRENT_DOWNLOADS`: общий лимит параллельных скачиваний.
 - `MAX_ACTIVE_DOWNLOADS_PER_USER`: лимит активных скачиваний на пользователя.
+- `MAX_CONCURRENT_VIDEO_DOWNLOADS`: отдельный общий лимит параллельных YouTube-видео.
+- `MAX_ACTIVE_VIDEO_DOWNLOADS_PER_USER`: отдельный лимит активных видео на пользователя.
 - `DIRECT_TELEGRAM_AUDIO_URL_ENABLED`: если `true`, бот сначала отдаёт Telegram прямой mp3 URL и скачивает файл сам только при fallback.
+- `YOUTUBE_VIDEO_DOWNLOAD_ENABLED`: включает раздел скачивания YouTube-видео.
+- `VIDEO_STATUS_UPDATE_INTERVAL_SECONDS`: интервал обновления статуса видео со спинером и ETA.
 - `DATA_DIR`, `TMP_DIR`, `CACHE_DB_PATH`: пути хранения кэша и временных файлов.
 - `PREFERRED_AUDIO_CODEC`: `mp3` или `m4a`.
 - `YTDLP_SOCKET_TIMEOUT`: timeout сетевых операций downloader-а.

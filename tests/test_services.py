@@ -17,12 +17,15 @@ def make_settings(tmp_path: Path) -> Settings:
         bot_token="123:test",
         log_level="INFO",
         telegram_max_audio_mb=1,
+        telegram_max_video_mb=1,
         search_results_limit=5,
         search_results_page_size=5,
         max_query_length=20,
         max_duration_seconds=300,
         max_concurrent_downloads=2,
         max_active_downloads_per_user=1,
+        max_concurrent_video_downloads=1,
+        max_active_video_downloads_per_user=1,
         data_dir=tmp_path / "data",
         tmp_dir=tmp_path / "tmp",
         cache_db_path=tmp_path / "data" / "cache.sqlite3",
@@ -42,6 +45,8 @@ def make_settings(tmp_path: Path) -> Settings:
         telegram_polling_timeout=10,
         telegram_tasks_concurrency_limit=20,
         direct_telegram_audio_url_enabled=True,
+        youtube_video_download_enabled=True,
+        video_status_update_interval_seconds=5,
     )
 
 

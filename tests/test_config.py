@@ -60,6 +60,8 @@ def test_load_settings_uses_fast_polling_defaults(
     monkeypatch.delenv("TELEGRAM_POLLING_TIMEOUT", raising=False)
     monkeypatch.delenv("TELEGRAM_TASKS_CONCURRENCY_LIMIT", raising=False)
     monkeypatch.delenv("DIRECT_TELEGRAM_AUDIO_URL_ENABLED", raising=False)
+    monkeypatch.delenv("YOUTUBE_VIDEO_DOWNLOAD_ENABLED", raising=False)
+    monkeypatch.delenv("VIDEO_STATUS_UPDATE_INTERVAL_SECONDS", raising=False)
     monkeypatch.delenv("IMUSIC_TIMEOUT", raising=False)
     monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
     for index in range(1, 6):
@@ -68,10 +70,13 @@ def test_load_settings_uses_fast_polling_defaults(
     settings = load_settings()
 
     assert settings.youtube_search_enabled is False
+    assert settings.youtube_video_download_enabled is True
     assert settings.search_results_limit == 30
     assert settings.search_results_page_size == 5
     assert settings.telegram_single_instance_lock is True
     assert settings.telegram_polling_timeout == 10
     assert settings.telegram_tasks_concurrency_limit == 20
     assert settings.direct_telegram_audio_url_enabled is True
+    assert settings.telegram_max_video_mb == 49
+    assert settings.video_status_update_interval_seconds == 5
     assert settings.imusic_timeout == 8

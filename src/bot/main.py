@@ -9,18 +9,20 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from src.bot.handlers import search, start
+from src.bot.handlers import search, start, youtube_video
 from src.config import ConfigError, Settings, load_settings
 from src.infrastructure.audio_cache import AudioCache
 from src.infrastructure.imusic_client import IMusicClient
 from src.infrastructure.rate_limit import DownloadLimiter
 from src.infrastructure.single_instance import SingleInstanceLock, SingleInstanceLockError
 from src.infrastructure.session_store import SearchSessionStore
+from src.infrastructure.user_mode_store import UserModeStore
 from src.infrastructure.youtube_cookies import prepare_youtube_cookies
 from src.infrastructure.yt_dlp_client import YtDlpClient
 from src.services.container import AppServices
 from src.services.download_service import DownloadService
 from src.services.search_service import SearchService
+from src.services.video_download_service import VideoDownloadService
 
 
 def setup_logging(settings: Settings) -> None:
@@ -37,7 +39,8 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
 
     cookies_path = None
     yt_dlp_client = None
-    if settings.youtube_search_enabled:
+    youtube_client_enabled = settings.youtube_search_enabled or settings.youtube_video_download_enabled
+    if youtube_client_enabled:
         cookies_path = prepare_youtube_cookies(
             data_dir=settings.data_dir,
             cookies_file=settings.ytdlp_cookies_file,
@@ -46,7 +49,7 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
         )
         if cookies_path is None:
             logging.getLogger(__name__).warning(
-                "YouTube search is enabled, but cookies are not configured."
+                "YouTube client is enabled, but cookies are not configured."
             )
         yt_dlp_client = YtDlpClient(
             socket_timeout=settings.ytdlp_socket_timeout,
@@ -73,12 +76,21 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
             settings=settings,
             imusic_client=imusic_client,
         ),
+        video_download=VideoDownloadService(
+            client=yt_dlp_client,
+            settings=settings,
+        ),
         cache=cache,
         limiter=DownloadLimiter(
             global_limit=settings.max_concurrent_downloads,
             per_user_limit=settings.max_active_downloads_per_user,
         ),
+        video_limiter=DownloadLimiter(
+            global_limit=settings.max_concurrent_video_downloads,
+            per_user_limit=settings.max_active_video_downloads_per_user,
+        ),
         sessions=SearchSessionStore(),
+        modes=UserModeStore(),
     )
     return services, cookies_path
 
@@ -99,6 +111,7 @@ async def main() -> None:
     )
     dispatcher = Dispatcher(services=services, settings=settings)
     dispatcher.include_router(start.router)
+    dispatcher.include_router(youtube_video.router)
     dispatcher.include_router(search.router)
 
     logger = logging.getLogger(__name__)
@@ -118,9 +131,10 @@ async def main() -> None:
 
         await bot.delete_webhook(drop_pending_updates=True)
         logger.info(
-            "Music bot started in polling mode (imusic=%s, youtube_search=%s, lock=%s)",
+            "Music bot started in polling mode (imusic=%s, youtube_search=%s, youtube_video=%s, lock=%s)",
             "yes" if settings.imusic_fallback_enabled else "no",
             "yes" if settings.youtube_search_enabled else "no",
+            "yes" if settings.youtube_video_download_enabled else "no",
             "yes" if instance_lock is not None else "no",
         )
         await dispatcher.start_polling(

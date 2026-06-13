@@ -96,12 +96,15 @@ class Settings:
     bot_token: str
     log_level: str
     telegram_max_audio_mb: int
+    telegram_max_video_mb: int
     search_results_limit: int
     search_results_page_size: int
     max_query_length: int
     max_duration_seconds: int
     max_concurrent_downloads: int
     max_active_downloads_per_user: int
+    max_concurrent_video_downloads: int
+    max_active_video_downloads_per_user: int
     data_dir: Path
     tmp_dir: Path
     cache_db_path: Path
@@ -121,10 +124,16 @@ class Settings:
     telegram_polling_timeout: int
     telegram_tasks_concurrency_limit: int
     direct_telegram_audio_url_enabled: bool
+    youtube_video_download_enabled: bool
+    video_status_update_interval_seconds: int
 
     @property
     def telegram_max_audio_bytes(self) -> int:
         return self.telegram_max_audio_mb * 1024 * 1024
+
+    @property
+    def telegram_max_video_bytes(self) -> int:
+        return self.telegram_max_video_mb * 1024 * 1024
 
 
 def load_settings() -> Settings:
@@ -156,12 +165,19 @@ def load_settings() -> Settings:
         bot_token=bot_token,
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         telegram_max_audio_mb=_get_int("TELEGRAM_MAX_AUDIO_MB", 49, minimum=1),
+        telegram_max_video_mb=_get_int("TELEGRAM_MAX_VIDEO_MB", 49, minimum=1),
         search_results_limit=_get_int("SEARCH_RESULTS_LIMIT", 30, minimum=1),
         search_results_page_size=_get_int("SEARCH_RESULTS_PAGE_SIZE", 5, minimum=1),
         max_query_length=_get_int("MAX_QUERY_LENGTH", 120, minimum=10),
         max_duration_seconds=_get_int("MAX_DURATION_SECONDS", 900, minimum=30),
         max_concurrent_downloads=_get_int("MAX_CONCURRENT_DOWNLOADS", 4, minimum=1),
         max_active_downloads_per_user=_get_int("MAX_ACTIVE_DOWNLOADS_PER_USER", 1, minimum=1),
+        max_concurrent_video_downloads=_get_int("MAX_CONCURRENT_VIDEO_DOWNLOADS", 1, minimum=1),
+        max_active_video_downloads_per_user=_get_int(
+            "MAX_ACTIVE_VIDEO_DOWNLOADS_PER_USER",
+            1,
+            minimum=1,
+        ),
         data_dir=data_dir,
         tmp_dir=tmp_dir,
         cache_db_path=cache_db_path,
@@ -181,4 +197,10 @@ def load_settings() -> Settings:
         telegram_polling_timeout=_get_int("TELEGRAM_POLLING_TIMEOUT", 10, minimum=1),
         telegram_tasks_concurrency_limit=_get_int("TELEGRAM_TASKS_CONCURRENCY_LIMIT", 20, minimum=1),
         direct_telegram_audio_url_enabled=_get_bool("DIRECT_TELEGRAM_AUDIO_URL_ENABLED", True),
+        youtube_video_download_enabled=_get_bool("YOUTUBE_VIDEO_DOWNLOAD_ENABLED", True),
+        video_status_update_interval_seconds=_get_int(
+            "VIDEO_STATUS_UPDATE_INTERVAL_SECONDS",
+            5,
+            minimum=2,
+        ),
     )
