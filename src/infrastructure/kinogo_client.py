@@ -4,6 +4,7 @@ import base64
 import html
 import logging
 import re
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -28,6 +29,8 @@ _SOURCE_BLOCK_PATTERN = re.compile(
     r'"title":"((?:\\.|[^"\\])*)".*?"file":"((?:\\.|[^"\\])*)".*?"duration":(\d+)',
     re.DOTALL,
 )
+_READ_ATTEMPTS = 2
+_READ_RETRY_DELAY_SECONDS = 0.5
 
 
 class KinogoError(RuntimeError):
@@ -57,6 +60,12 @@ class KinogoSource:
     duration_seconds: int | None
 
 
+@dataclass(frozen=True)
+class KinogoPageDetails:
+    title: str
+    player_url: str
+
+
 class KinogoClient:
     def __init__(
         self,
@@ -84,20 +93,20 @@ class KinogoClient:
 
     def get_page_title(self, page_url: str) -> str:
         html_text = self._read_text(page_url)
-        match = re.search(r"<h1[^>]*>(.*?)</h1>", html_text, flags=re.DOTALL | re.IGNORECASE)
-        if match is None:
-            match = re.search(
-                r"<h2[^>]*>\s*<a[^>]+title=[\"']([^\"']+)[\"']",
-                html_text,
-                flags=re.DOTALL | re.IGNORECASE,
-            )
-            if match is None:
-                return "Фильм"
-            return self._clean_text(match.group(1))
-        return self._clean_text(re.sub(r"<[^>]+>", "", match.group(1)))
+        return self._parse_page_title(html_text)
 
     def get_player_url(self, page_url: str) -> str:
         html_text = self._read_text(page_url)
+        return self._parse_player_url(html_text)
+
+    def get_page_details(self, page_url: str) -> KinogoPageDetails:
+        html_text = self._read_text(page_url)
+        return KinogoPageDetails(
+            title=self._parse_page_title(html_text),
+            player_url=self._parse_player_url(html_text),
+        )
+
+    def _parse_player_url(self, html_text: str) -> str:
         match = re.search(
             r'<li[^>]*data-src=["\']([^"\']+)["\'][^>]*data-provider=["\']1["\']'
             r'|<li[^>]*data-provider=["\']1["\'][^>]*data-src=["\']([^"\']+)["\']',
@@ -202,18 +211,32 @@ class KinogoClient:
         headers = {
             "User-Agent": self._user_agent(),
             "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Cache-Control": "no-cache",
+            "Connection": "close",
         }
         if referer is not None:
             headers["Referer"] = referer
 
-        request = Request(url, headers=headers)
-        try:
-            with urlopen(request, timeout=self._timeout) as response:
-                raw = response.read()
-        except (HTTPError, URLError, TimeoutError, OSError) as exc:
-            raise KinogoError("Failed to read Kinogo page") from exc
+        last_error: HTTPError | URLError | TimeoutError | OSError | None = None
+        for attempt in range(1, _READ_ATTEMPTS + 1):
+            request = Request(url, headers=headers)
+            try:
+                with urlopen(request, timeout=self._timeout) as response:
+                    raw = response.read()
+                return raw.decode("utf-8", errors="replace")
+            except (HTTPError, URLError, TimeoutError, OSError) as exc:
+                last_error = exc
+                logger.warning(
+                    "Failed to read Kinogo URL (attempt %s/%s): %s",
+                    attempt,
+                    _READ_ATTEMPTS,
+                    self._redact_url(url),
+                )
+                if attempt < _READ_ATTEMPTS:
+                    time.sleep(_READ_RETRY_DELAY_SECONDS)
 
-        return raw.decode("utf-8", errors="replace")
+        raise KinogoError("Failed to read Kinogo page") from last_error
 
     def _normalize_page_url(self, href: str) -> str:
         if href.startswith("http://") or href.startswith("https://"):
@@ -235,6 +258,19 @@ class KinogoClient:
         ):
             logger.warning("Blocked Kinogo URL host: %s", host)
             raise KinogoError("URL host is not allowed for Kinogo downloads")
+
+    def _parse_page_title(self, html_text: str) -> str:
+        match = re.search(r"<h1[^>]*>(.*?)</h1>", html_text, flags=re.DOTALL | re.IGNORECASE)
+        if match is None:
+            match = re.search(
+                r"<h2[^>]*>\s*<a[^>]+title=[\"']([^\"']+)[\"']",
+                html_text,
+                flags=re.DOTALL | re.IGNORECASE,
+            )
+            if match is None:
+                return "Фильм"
+            return self._clean_text(match.group(1))
+        return self._clean_text(re.sub(r"<[^>]+>", "", match.group(1)))
 
     @staticmethod
     def _normalize_allowed_host_suffixes(values: Iterable[str]) -> tuple[str, ...]:
@@ -260,6 +296,13 @@ class KinogoClient:
     def _clean_text(value: str) -> str:
         text = html.unescape(re.sub(r"\s+", " ", value))
         return text.strip()
+
+    @staticmethod
+    def _redact_url(url: str) -> str:
+        parsed = urlparse(url)
+        if not parsed.query:
+            return url
+        return parsed._replace(query="...").geturl()
 
     @staticmethod
     def _user_agent() -> str:

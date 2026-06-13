@@ -11,7 +11,7 @@
 1. Пользователь выбирает `Скачать фильм/сериал` в меню.
 2. Бот ищет результаты на `kinogo.family`.
 3. Пользователь выбирает фильм/сериал из пагинированного списка.
-4. `KinogoClient` читает страницу и URL плеера 1 (`cinemar.cc/embed/...`).
+4. `KinogoClient` одним чтением получает название страницы и URL плеера 1 (`cinemar.cc/embed/...`).
 5. Из HTML плеера извлекаются доступные HLS-ссылки (`host.cinemap.cc/...m3u8`).
 6. Пользователь выбирает качество.
 7. `MovieDownloadService` скачивает поток через `ffmpeg` с `Referer: kinogo.family`.
@@ -39,6 +39,8 @@ KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cin
 ```
 
 `KINOGO_ALLOWED_HOST_SUFFIXES` ограничивает домены, с которых можно читать страницу плеера и HLS-потоки. Если Kinogo сменит домен плеера, добавь новый suffix в этот список, например `cinemar.example`, не отключая проверку URL.
+
+Чтение Kinogo/Cinemar выполняется с коротким retry. Если сайт медленно отвечает на Railway, в логах будет `Failed to read Kinogo URL (attempt 1/2): ...`; при повторном сбое пользователь получит сообщение с просьбой попробовать другой результат.
 
 ## Как тестировать
 
@@ -70,3 +72,5 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 [2026-06-13] – Добавлено: режим скачивания фильмов/сериалов через Kinogo + Cinemar player 1, отдельная очередь и документация.
 
 [2026-06-13] – Исправлено: allowlist доменов Kinogo/Cinemar теперь расширяется через `KINOGO_ALLOWED_HOST_SUFFIXES`, чтобы смена домена плеера не ломала загрузку.
+
+[2026-06-13] – Исправлено: выбор фильма больше не делает два параллельных запроса к одной Kinogo-странице; добавлен retry и URL-логирование при сетевых timeout.

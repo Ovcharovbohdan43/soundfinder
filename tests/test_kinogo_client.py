@@ -40,6 +40,16 @@ def test_player_url_exists_in_movie_fixture() -> None:
     assert player_url.startswith("https://cinemar.cc/embed/")
 
 
+def test_parse_page_details_from_movie_fixture(client: KinogoClient) -> None:
+    html = (FIXTURES_DIR / "kinogo_movie.html").read_text(encoding="utf-8")
+
+    title = client._parse_page_title(html)  # noqa: SLF001
+    player_url = client._parse_player_url(html)  # noqa: SLF001
+
+    assert title
+    assert player_url.startswith("https://cinemar.cc/embed/")
+
+
 def test_allowed_host_suffixes_can_be_extended() -> None:
     client = KinogoClient(
         base_url="https://kinogo.family/",

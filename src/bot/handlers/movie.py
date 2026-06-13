@@ -132,10 +132,7 @@ async def movie_pick_handler(callback: CallbackQuery, services: AppServices, set
     await message.edit_text(f"Проверяю плеер 1: {result.title}")
 
     try:
-        page_title, sources = await asyncio.gather(
-            asyncio.to_thread(services.kinogo.get_page_title, result.url),
-            _load_sources(services.kinogo, result.url),
-        )
+        page_title, sources = await _load_sources(services.kinogo, result.url)
     except KinogoNotFoundError as exc:
         await message.edit_text(str(exc))
         return
@@ -246,8 +243,9 @@ async def movie_noop_handler(callback: CallbackQuery) -> None:
 
 
 async def _load_sources(client: KinogoClient, page_url: str):
-    player_url = await asyncio.to_thread(client.get_player_url, page_url)
-    return await asyncio.to_thread(client.get_sources, player_url)
+    page_details = await asyncio.to_thread(client.get_page_details, page_url)
+    sources = await asyncio.to_thread(client.get_sources, page_details.player_url)
+    return page_details.title, sources
 
 
 async def _stop_status(status_task: asyncio.Task[None], stop_status: asyncio.Event) -> None:
