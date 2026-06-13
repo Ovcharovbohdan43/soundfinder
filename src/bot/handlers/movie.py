@@ -11,7 +11,12 @@ from aiogram.types import CallbackQuery, FSInputFile, InlineKeyboardButton, Inli
 from src.bot.handlers.search import BOT_CAPTION
 from src.bot.ui import MOVIE_MODE_BUTTON, MUSIC_MODE_BUTTON, YOUTUBE_VIDEO_MODE_BUTTON
 from src.config import Settings
-from src.infrastructure.kinogo_client import KinogoClient, KinogoError, KinogoNotFoundError
+from src.infrastructure.kinogo_client import (
+    KinogoClient,
+    KinogoError,
+    KinogoNotFoundError,
+    KinogoPlayerBlockedError,
+)
 from src.infrastructure.rate_limit import RateLimitExceeded
 from src.infrastructure.user_mode_store import UserMode
 from src.services.container import AppServices
@@ -53,6 +58,7 @@ async def movie_search_handler(message: Message, services: AppServices, settings
         await message.answer("Напиши название фильма или сериала.")
         return
 
+    await services.analytics.record_event("movie_search", user_id=user_id)
     status_message = await message.answer("Ищу фильмы и сериалы...")
     try:
         results = await asyncio.to_thread(services.kinogo.search, query, limit=settings.search_results_limit)
@@ -136,6 +142,13 @@ async def movie_pick_handler(callback: CallbackQuery, services: AppServices, set
     except KinogoNotFoundError as exc:
         await message.edit_text(str(exc))
         return
+    except KinogoPlayerBlockedError:
+        logger.warning("Kinogo player blocked this server")
+        await message.edit_text(
+            "Плеер заблокировал сервер Railway (HTTP 410). "
+            "Нужен `KINOGO_PROXY` или попробуй другой результат."
+        )
+        return
     except KinogoError:
         logger.exception("Failed to load Kinogo sources")
         await message.edit_text("Не удалось получить ссылки для скачивания. Попробуй другой результат.")
@@ -215,6 +228,7 @@ async def movie_quality_handler(
                     )
                 else:
                     await message.answer_document(FSInputFile(movie.path), caption=caption)
+                await services.analytics.record_event("movie_sent", user_id=user_id)
                 with suppress(Exception):
                     await status_message.delete()
             finally:

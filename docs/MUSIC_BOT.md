@@ -49,6 +49,9 @@
 - `/start`: краткая инструкция.
 - `/help`: пример запроса и ограничения.
 - `/terms`: предупреждение о правах и правилах платформ.
+- `/admin`: админ-панель, доступна только пользователям из `ADMIN_IDS`.
+- `/stats`: статистика пользователей, посещений и запросов.
+- `/broadcast`: создание поста-рассылки от имени бота.
 
 Пример:
 
@@ -81,6 +84,9 @@ TELEGRAM_TASKS_CONCURRENCY_LIMIT=20
 DIRECT_TELEGRAM_AUDIO_URL_ENABLED=true
 YOUTUBE_VIDEO_DOWNLOAD_ENABLED=true
 VIDEO_STATUS_UPDATE_INTERVAL_SECONDS=5
+ADMIN_IDS=123456789
+BROADCAST_ENABLED=true
+BROADCAST_MESSAGES_PER_SECOND=20
 MOVIE_DOWNLOAD_ENABLED=true
 MAX_CONCURRENT_MOVIE_DOWNLOADS=1
 MAX_ACTIVE_MOVIE_DOWNLOADS_PER_USER=1
@@ -89,6 +95,7 @@ MOVIE_STATUS_UPDATE_INTERVAL_SECONDS=5
 KINOGO_BASE_URL=https://kinogo.family/
 KINOGO_TIMEOUT=15
 KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cinemar.top,api.ortified.ws,interkh.com,host.cinemap.cc,video.cinemap.cc,cfnd.cinemap.cc
+KINOGO_PROXY=
 PREFERRED_AUDIO_CODEC=mp3
 IMUSIC_FALLBACK_ENABLED=true
 IMUSIC_BASE_URL=https://two.imusic.fm/
@@ -114,6 +121,7 @@ Manual e2e:
 6. Повторить выбор того же трека и убедиться, что он отправлен из кэша.
 7. Выбрать `Скачать YouTube видео`.
 8. Отправить YouTube URL и проверить статус скачивания/отправку видео.
+9. Для админ-функций установить `ADMIN_IDS`, отправить `/stats` и протестировать `/broadcast` с отменой.
 
 ## Ограничения
 
@@ -132,6 +140,8 @@ Manual e2e:
 - `DIRECT_TELEGRAM_AUDIO_URL_ENABLED=true` ускоряет первую отправку: Telegram сам скачивает mp3 по URL. Если URL недоступен для Telegram, бот автоматически откатывается на server-side download.
 - `two.imusic.fm` используется только через публичные прямые mp3-ссылки и не обходит DRM, авторизацию или платный доступ.
 - Бот не должен использоваться для обхода DRM, paywall или скачивания контента без разрешения.
+- Админ-команды доступны только numeric Telegram IDs из `ADMIN_IDS`; реальные значения не коммитятся.
+- Рассылки используют Telegram `copy_message`, поэтому формат поста сохраняется, а получатели видят сообщение от имени бота.
 
 ## Затронутые модули
 
@@ -141,6 +151,8 @@ Manual e2e:
 - `src/bot/handlers/start.py`
 - `src/bot/handlers/search.py`
 - `src/bot/handlers/youtube_video.py`
+- `src/bot/handlers/admin.py`
+- `src/bot/middleware.py`
 - `src/bot/ui.py`
 - `src/services/search_service.py`
 - `src/services/download_service.py`
@@ -152,6 +164,9 @@ Manual e2e:
 - `src/infrastructure/single_instance.py`
 - `src/infrastructure/session_store.py`
 - `src/infrastructure/user_mode_store.py`
+- `src/infrastructure/analytics_store.py`
+- `src/infrastructure/broadcast_session_store.py`
+- `src/services/broadcast_service.py`
 - `src/services/video_download_service.py`
 - `railway.json`
 - `.env.example`

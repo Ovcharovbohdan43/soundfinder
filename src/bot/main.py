@@ -9,9 +9,12 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from src.bot.handlers import movie, search, start, youtube_video
+from src.bot.handlers import admin, movie, search, start, youtube_video
+from src.bot.middleware import ActivityMiddleware
 from src.config import ConfigError, Settings, load_settings
+from src.infrastructure.analytics_store import AnalyticsStore
 from src.infrastructure.audio_cache import AudioCache
+from src.infrastructure.broadcast_session_store import BroadcastSessionStore
 from src.infrastructure.imusic_client import IMusicClient
 from src.infrastructure.kinogo_client import KinogoClient
 from src.infrastructure.movie_session_store import MovieSessionStore
@@ -22,6 +25,7 @@ from src.infrastructure.user_mode_store import UserModeStore
 from src.infrastructure.youtube_cookies import prepare_youtube_cookies
 from src.infrastructure.yt_dlp_client import YtDlpClient
 from src.services.container import AppServices
+from src.services.broadcast_service import BroadcastService
 from src.services.download_service import DownloadService
 from src.services.movie_download_service import MovieDownloadService
 from src.services.search_service import SearchService
@@ -70,12 +74,15 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
             base_url=settings.kinogo_base_url,
             timeout=settings.kinogo_timeout,
             allowed_host_suffixes=settings.kinogo_allowed_host_suffixes,
+            proxy=settings.kinogo_proxy,
         )
         if settings.movie_download_enabled
         else None
     )
     cache = AudioCache(settings.cache_db_path)
     await cache.init()
+    analytics = AnalyticsStore(settings.cache_db_path)
+    await analytics.init()
 
     services = AppServices(
         search=SearchService(
@@ -97,6 +104,10 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
             if kinogo_client is not None
             else None
         ),
+        broadcast=BroadcastService(
+            analytics=analytics,
+            messages_per_second=settings.broadcast_messages_per_second,
+        ),
         cache=cache,
         limiter=DownloadLimiter(
             global_limit=settings.max_concurrent_downloads,
@@ -110,6 +121,8 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
             global_limit=settings.max_concurrent_movie_downloads,
             per_user_limit=settings.max_active_movie_downloads_per_user,
         ),
+        analytics=analytics,
+        broadcast_sessions=BroadcastSessionStore(),
         sessions=SearchSessionStore(),
         movie_sessions=MovieSessionStore(),
         modes=UserModeStore(),
@@ -133,6 +146,9 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dispatcher = Dispatcher(services=services, settings=settings)
+    dispatcher.message.middleware(ActivityMiddleware())
+    dispatcher.callback_query.middleware(ActivityMiddleware())
+    dispatcher.include_router(admin.router)
     dispatcher.include_router(start.router)
     dispatcher.include_router(movie.router)
     dispatcher.include_router(youtube_video.router)

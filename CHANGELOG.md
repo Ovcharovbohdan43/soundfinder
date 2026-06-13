@@ -1,5 +1,9 @@
 # Changelog
 
+[2026-06-13] - Добавлено: админ-панель с `/stats`, подтверждаемыми broadcast-постами, сбором пользователей и дневной статистикой запросов.
+
+[2026-06-13] - Добавлено: `KINOGO_PROXY` для Kinogo/player/HLS запросов, когда `api.ortified.ws` блокирует Railway/datacenter IP с `HTTP 410 Gone`.
+
 [2026-06-13] - Исправлено: запросы к `api.ortified.ws` player теперь отправляются с браузерными iframe headers, чтобы снизить `HTTP 410 Gone` на Railway.
 
 [2026-06-13] - Добавлено: fallback parser для нового `api.ortified.ws` / `player-venom` Kinogo player, который извлекает HLS-ссылки `*.interkh.com`.

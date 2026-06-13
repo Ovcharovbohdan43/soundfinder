@@ -116,6 +116,7 @@ async def search_handler(message: Message, services: AppServices, settings: Sett
     if services.modes.get(user_id) != UserMode.MUSIC:
         return
 
+    await services.analytics.record_event("music_search", user_id=user_id)
     status_message = await message.answer("Ищу подходящие треки...")
 
     try:
@@ -234,6 +235,7 @@ async def select_track_handler(
                     duration=cached.duration,
                     caption=BOT_CAPTION,
                 )
+                await services.analytics.record_event("audio_sent", user_id=user_id)
                 return
 
             if settings.direct_telegram_audio_url_enabled:
@@ -253,6 +255,7 @@ async def select_track_handler(
                             performer=result.uploader,
                             duration=result.duration,
                         )
+                    await services.analytics.record_event("audio_sent", user_id=user_id)
                     return
                 except TelegramAPIError:
                     logger.warning(
@@ -277,6 +280,7 @@ async def select_track_handler(
                         performer=audio.performer,
                         duration=audio.duration,
                     )
+                await services.analytics.record_event("audio_sent", user_id=user_id)
             finally:
                 services.download.cleanup(audio)
     except RateLimitExceeded:

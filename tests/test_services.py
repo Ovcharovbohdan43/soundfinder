@@ -55,6 +55,10 @@ def make_settings(tmp_path: Path) -> Settings:
         kinogo_base_url="https://kinogo.family/",
         kinogo_timeout=15,
         kinogo_allowed_host_suffixes=("kinogo.family", "cinemar.cc", "host.cinemap.cc"),
+        kinogo_proxy=None,
+        admin_ids=(),
+        broadcast_enabled=True,
+        broadcast_messages_per_second=20,
     )
 
 

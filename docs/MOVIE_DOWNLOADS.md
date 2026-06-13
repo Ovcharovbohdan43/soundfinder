@@ -36,11 +36,14 @@ MOVIE_STATUS_UPDATE_INTERVAL_SECONDS=5
 KINOGO_BASE_URL=https://kinogo.family/
 KINOGO_TIMEOUT=15
 KINOGO_ALLOWED_HOST_SUFFIXES=kinogo.family,cinemar.cc,cinemar.su,cinemar.one,cinemar.top,api.ortified.ws,interkh.com,host.cinemap.cc,video.cinemap.cc,cfnd.cinemap.cc
+KINOGO_PROXY=
 ```
 
 `KINOGO_ALLOWED_HOST_SUFFIXES` ограничивает домены, с которых можно читать страницу плеера и HLS-потоки. Если Kinogo сменит домен плеера, добавь новый suffix в этот список, например `cinemar.example`, не отключая проверку URL.
 
 Чтение Kinogo/Cinemar выполняется с коротким retry. Если сайт медленно отвечает на Railway, в логах будет `Failed to read Kinogo URL (attempt 1/2): ...`; при повторном сбое пользователь получит сообщение с просьбой попробовать другой результат.
+
+`KINOGO_PROXY` нужен, если `api.ortified.ws` стабильно возвращает `HTTP 410 Gone` на Railway IP. Используй HTTP(S) proxy URL, например `http://user:password@host:port`; не логируй и не коммить реальные proxy credentials.
 
 ## Как тестировать
 
@@ -57,7 +60,7 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 - Cinemar может менять обфускацию HTML; парсер рассчитан на публичные ссылки плеера 1.
 - Для cinemar нужен заголовок `Referer` с Kinogo.
 - Если в Railway появится `Blocked Kinogo URL host`, добавь показанный хост или его безопасный suffix в `KINOGO_ALLOWED_HOST_SUFFIXES`.
-- Новый `api.ortified.ws` player может возвращать `410 Gone` на отдельные embed URL. Для player-запросов бот отправляет браузерные iframe headers (`Origin`, `Sec-Fetch-*`), а при успешном чтении извлекает HLS из `player-venom` playlist.
+- Новый `api.ortified.ws` player может возвращать `410 Gone` на отдельные embed URL или Railway/datacenter IP. Для player-запросов бот отправляет браузерные iframe headers (`Origin`, `Sec-Fetch-*`), а при IP-блокировке нужен `KINOGO_PROXY`.
 
 ## Затронутые модули
 
@@ -81,3 +84,5 @@ pytest tests/test_kinogo_client.py tests/test_movie_session_store.py tests/test_
 [2026-06-13] – Добавлено: fallback parser для `api.ortified.ws`/`player-venom`, который извлекает HLS-ссылки `*.interkh.com`.
 
 [2026-06-13] – Исправлено: player-запросы к `api.ortified.ws` теперь отправляются с браузерными iframe headers, чтобы снизить `HTTP 410 Gone` на Railway.
+
+[2026-06-13] – Добавлено: `KINOGO_PROXY` для обхода блокировки Railway/datacenter IP на Kinogo player hosts.

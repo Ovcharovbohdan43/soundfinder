@@ -62,9 +62,13 @@ def test_load_settings_uses_fast_polling_defaults(
     monkeypatch.delenv("DIRECT_TELEGRAM_AUDIO_URL_ENABLED", raising=False)
     monkeypatch.delenv("YOUTUBE_VIDEO_DOWNLOAD_ENABLED", raising=False)
     monkeypatch.delenv("VIDEO_STATUS_UPDATE_INTERVAL_SECONDS", raising=False)
+    monkeypatch.delenv("ADMIN_IDS", raising=False)
+    monkeypatch.delenv("BROADCAST_ENABLED", raising=False)
+    monkeypatch.delenv("BROADCAST_MESSAGES_PER_SECOND", raising=False)
     monkeypatch.delenv("MOVIE_DOWNLOAD_ENABLED", raising=False)
     monkeypatch.delenv("KINOGO_TIMEOUT", raising=False)
     monkeypatch.delenv("KINOGO_ALLOWED_HOST_SUFFIXES", raising=False)
+    monkeypatch.delenv("KINOGO_PROXY", raising=False)
     monkeypatch.delenv("IMUSIC_TIMEOUT", raising=False)
     monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
     for index in range(1, 6):
@@ -82,12 +86,16 @@ def test_load_settings_uses_fast_polling_defaults(
     assert settings.direct_telegram_audio_url_enabled is True
     assert settings.telegram_max_video_mb == 49
     assert settings.video_status_update_interval_seconds == 5
+    assert settings.admin_ids == ()
+    assert settings.broadcast_enabled is True
+    assert settings.broadcast_messages_per_second == 20
     assert settings.movie_download_enabled is True
     assert settings.telegram_max_movie_mb == 49
     assert settings.kinogo_timeout == 15
     assert "cinemar.su" in settings.kinogo_allowed_host_suffixes
     assert "api.ortified.ws" in settings.kinogo_allowed_host_suffixes
     assert "interkh.com" in settings.kinogo_allowed_host_suffixes
+    assert settings.kinogo_proxy is None
     assert settings.imusic_timeout == 8
 
 
@@ -109,3 +117,37 @@ def test_load_settings_parses_kinogo_allowed_host_suffixes(
     settings = load_settings()
 
     assert settings.kinogo_allowed_host_suffixes == ("cinemar.example", "host.cinemap.cc")
+
+
+def test_load_settings_reads_kinogo_proxy(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BOT_TOKEN", "123:test")
+    monkeypatch.setenv("IMUSIC_FALLBACK_ENABLED", "true")
+    monkeypatch.setenv("KINOGO_PROXY", "http://proxy.example:8080")
+    monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
+    for index in range(1, 6):
+        monkeypatch.delenv(f"YT_DLP_COOKIES_B64_{index}", raising=False)
+
+    settings = load_settings()
+
+    assert settings.kinogo_proxy == "http://proxy.example:8080"
+
+
+def test_load_settings_parses_admin_ids(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BOT_TOKEN", "123:test")
+    monkeypatch.setenv("IMUSIC_FALLBACK_ENABLED", "true")
+    monkeypatch.setenv("ADMIN_IDS", "123, 456,123")
+    monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
+    for index in range(1, 6):
+        monkeypatch.delenv(f"YT_DLP_COOKIES_B64_{index}", raising=False)
+
+    settings = load_settings()
+
+    assert settings.admin_ids == (123, 456)

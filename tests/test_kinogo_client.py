@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from urllib.error import HTTPError
 
 import pytest
 
@@ -77,6 +78,18 @@ def test_player_request_headers_match_browser_iframe_navigation(client: KinogoCl
     assert headers["Sec-Fetch-Mode"] == "navigate"
     assert headers["Sec-Fetch-Site"] == "cross-site"
     assert headers["Upgrade-Insecure-Requests"] == "1"
+
+
+def test_ortified_http_410_is_detected_as_player_block(client: KinogoClient) -> None:
+    error = HTTPError(
+        "https://api.ortified.ws/embed/movie/380",
+        410,
+        "Gone",
+        hdrs={},
+        fp=None,
+    )
+
+    assert client._is_ortified_gone("https://api.ortified.ws/embed/movie/380", error)  # noqa: SLF001
 
 
 def test_parse_ortified_sources_prefers_current_episode(client: KinogoClient) -> None:

@@ -66,6 +66,23 @@ def _parse_csv_hosts(name: str, raw_value: str | None, default: tuple[str, ...])
     return tuple(dict.fromkeys(hosts))
 
 
+def _parse_admin_ids(raw_value: str | None) -> tuple[int, ...]:
+    if raw_value is None or raw_value.strip() == "":
+        return ()
+
+    admin_ids: list[int] = []
+    for item in raw_value.split(","):
+        value = item.strip()
+        if not value:
+            continue
+        try:
+            admin_ids.append(int(value))
+        except ValueError as exc:
+            raise ConfigError("ADMIN_IDS must contain comma-separated Telegram user IDs") from exc
+
+    return tuple(dict.fromkeys(admin_ids))
+
+
 def _count_ytdlp_cookie_chunks() -> int:
     pattern = re.compile(r"^YT_DLP_COOKIES_B64_(\d+)$")
     return sum(1 for name in os.environ if pattern.match(name))
@@ -150,6 +167,10 @@ class Settings:
     kinogo_base_url: str
     kinogo_timeout: int
     kinogo_allowed_host_suffixes: tuple[str, ...]
+    kinogo_proxy: str | None
+    admin_ids: tuple[int, ...]
+    broadcast_enabled: bool
+    broadcast_messages_per_second: int
 
     @property
     def telegram_max_audio_bytes(self) -> int:
@@ -262,4 +283,8 @@ def load_settings() -> Settings:
                 "cfnd.cinemap.cc",
             ),
         ),
+        kinogo_proxy=os.getenv("KINOGO_PROXY", "").strip() or None,
+        admin_ids=_parse_admin_ids(os.getenv("ADMIN_IDS")),
+        broadcast_enabled=_get_bool("BROADCAST_ENABLED", True),
+        broadcast_messages_per_second=_get_int("BROADCAST_MESSAGES_PER_SECOND", 20, minimum=1),
     )

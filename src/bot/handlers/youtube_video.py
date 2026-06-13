@@ -45,6 +45,7 @@ async def youtube_video_handler(message: Message, services: AppServices, setting
         await message.answer("Отправь ссылку на YouTube-видео, например https://youtu.be/...")
         return
 
+    await services.analytics.record_event("youtube_video_request", user_id=user_id)
     progress = VideoDownloadProgress()
     status_message = await message.answer(
         "⏳ Готовлю YouTube-видео в максимальном доступном качестве со звуком..."
@@ -76,6 +77,7 @@ async def youtube_video_handler(message: Message, services: AppServices, setting
                     height=video.height,
                     supports_streaming=True,
                 )
+                await services.analytics.record_event("video_sent", user_id=user_id)
                 with suppress(Exception):
                     await status_message.delete()
             finally:

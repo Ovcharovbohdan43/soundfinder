@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urljoin, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,10 @@ class KinogoError(RuntimeError):
 
 
 class KinogoNotFoundError(KinogoError):
+    pass
+
+
+class KinogoPlayerBlockedError(KinogoError):
     pass
 
 
@@ -75,9 +79,11 @@ class KinogoClient:
         base_url: str,
         timeout: int,
         allowed_host_suffixes: Iterable[str] | None = None,
+        proxy: str | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/") + "/"
         self._timeout = timeout
+        self._proxy = proxy
         self._referer = self._base_url
         parsed = urlparse(self._base_url)
         self._allowed_host = parsed.netloc.lower()
@@ -271,7 +277,7 @@ class KinogoClient:
         for attempt in range(1, _READ_ATTEMPTS + 1):
             request = Request(url, headers=headers)
             try:
-                with urlopen(request, timeout=self._timeout) as response:
+                with self._open(request) as response:
                     raw = response.read()
                 return raw.decode("utf-8", errors="replace")
             except (HTTPError, URLError, TimeoutError, OSError) as exc:
@@ -285,7 +291,17 @@ class KinogoClient:
                 if attempt < _READ_ATTEMPTS:
                     time.sleep(_READ_RETRY_DELAY_SECONDS)
 
+        if self._is_ortified_gone(url, last_error):
+            raise KinogoPlayerBlockedError(
+                "Kinogo player blocked this server. Configure KINOGO_PROXY or try another result."
+            ) from last_error
         raise KinogoError("Failed to read Kinogo page") from last_error
+
+    def _open(self, request: Request):
+        if self._proxy is None:
+            return urlopen(request, timeout=self._timeout)
+        opener = build_opener(ProxyHandler({"http": self._proxy, "https": self._proxy}))
+        return opener.open(request, timeout=self._timeout)
 
     def _request_headers(self, *, referer: str | None = None) -> dict[str, str]:
         headers = {
@@ -384,6 +400,14 @@ class KinogoClient:
     def _origin_from_url(url: str) -> str:
         parsed = urlparse(url)
         return f"{parsed.scheme}://{parsed.netloc}"
+
+    @staticmethod
+    def _is_ortified_gone(url: str, exc: BaseException | None) -> bool:
+        return (
+            isinstance(exc, HTTPError)
+            and exc.code == 410
+            and urlparse(url).netloc.lower() == "api.ortified.ws"
+        )
 
     @staticmethod
     def _user_agent() -> str:
