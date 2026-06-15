@@ -58,11 +58,22 @@ async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
             logging.getLogger(__name__).warning(
                 "YouTube client is enabled, but cookies are not configured."
             )
+        soft_mode = cookies_path is None and settings.ytdlp_proxy is None
         yt_dlp_client = YtDlpClient(
             socket_timeout=settings.ytdlp_socket_timeout,
             cookies_path=cookies_path,
             proxy=settings.ytdlp_proxy,
             player_clients=settings.ytdlp_player_clients,
+            request_sleep_seconds=(
+                settings.ytdlp_request_sleep_seconds if soft_mode else 0.0
+            ),
+            download_sleep_min_seconds=(
+                settings.ytdlp_download_sleep_min_seconds if soft_mode else 0.0
+            ),
+            download_sleep_max_seconds=(
+                settings.ytdlp_download_sleep_max_seconds if soft_mode else 0.0
+            ),
+            extractor_retries=settings.ytdlp_extractor_retries,
         )
     imusic_client = (
         IMusicClient(base_url=settings.imusic_base_url, timeout=settings.imusic_timeout)

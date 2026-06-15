@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -10,6 +11,11 @@ from src.models import DownloadedVideo, SearchResult
 
 logger = logging.getLogger(__name__)
 
+_BROWSER_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+
 
 class YtDlpError(RuntimeError):
     pass
@@ -17,6 +23,80 @@ class YtDlpError(RuntimeError):
 
 class YtDlpBotBlockedError(YtDlpError):
     pass
+
+
+@dataclass(frozen=True)
+class _YoutubeExtractionProfile:
+    name: str
+    player_clients: tuple[str, ...]
+    player_skip: tuple[str, ...] = ()
+
+
+def classify_yt_dlp_error(exc: Exception) -> YtDlpError:
+    message = str(exc).lower()
+    bot_markers = (
+        "confirm you're not a bot",
+        "confirm you’re not a bot",
+        "sign in to confirm",
+        "sign in required",
+        "use --cookies-from-browser or --cookies",
+    )
+    if any(marker in message for marker in bot_markers):
+        return YtDlpBotBlockedError(
+            "YouTube blocked download from this server IP after trying multiple extraction modes."
+        )
+
+    filesize_markers = (
+        "larger than max-filesize",
+        "file is larger than max-filesize",
+        "exceeds the maximum filesize",
+        "above telegram upload limit",
+        "above configured filesize limit",
+    )
+    if any(marker in message for marker in filesize_markers):
+        return YtDlpError("Requested media is above configured filesize limit")
+
+    return YtDlpError("YouTube provider request failed")
+
+
+def is_retryable_yt_dlp_error(exc: YtDlpError) -> bool:
+    if isinstance(exc, YtDlpBotBlockedError):
+        return True
+
+    message = str(exc).lower()
+    retry_markers = (
+        "unable to extract",
+        "http error",
+        "connection",
+        "timed out",
+        "timeout",
+        "temporary failure",
+        "player response",
+        "precondition check failed",
+        "requested format is not available",
+        "provider request failed",
+    )
+    return any(marker in message for marker in retry_markers)
+
+
+def build_video_extraction_profiles(
+    primary_clients: tuple[str, ...],
+) -> tuple[_YoutubeExtractionProfile, ...]:
+    return (
+        _YoutubeExtractionProfile(
+            name="primary",
+            player_clients=primary_clients,
+            player_skip=("webpage",),
+        ),
+        _YoutubeExtractionProfile(
+            name="webpage",
+            player_clients=primary_clients,
+        ),
+        _YoutubeExtractionProfile(
+            name="browser",
+            player_clients=("web_safari", "mweb", "tv_embedded"),
+        ),
+    )
 
 
 class _YtDlpLogger:
@@ -33,31 +113,6 @@ class _YtDlpLogger:
         logger.debug("%s", msg)
 
 
-def classify_yt_dlp_error(exc: Exception) -> YtDlpError:
-    message = str(exc).lower()
-    bot_markers = (
-        "confirm you're not a bot",
-        "confirm you’re not a bot",
-        "sign in to confirm",
-        "sign in required",
-        "use --cookies-from-browser or --cookies",
-    )
-    if any(marker in message for marker in bot_markers):
-        return YtDlpBotBlockedError(
-            "YouTube blocked download from this server IP. Configure YouTube cookies for Railway."
-        )
-
-    filesize_markers = (
-        "larger than max-filesize",
-        "file is larger than max-filesize",
-        "exceeds the maximum filesize",
-    )
-    if any(marker in message for marker in filesize_markers):
-        return YtDlpError("Requested media is above configured filesize limit")
-
-    return YtDlpError("YouTube provider request failed")
-
-
 class YtDlpClient:
     def __init__(
         self,
@@ -66,17 +121,44 @@ class YtDlpClient:
         cookies_path: Path | None = None,
         proxy: str | None = None,
         player_clients: tuple[str, ...] = ("android_vr", "tv_embedded", "web_safari"),
+        request_sleep_seconds: float = 0.0,
+        download_sleep_min_seconds: float = 0.0,
+        download_sleep_max_seconds: float = 0.0,
+        extractor_retries: int = 3,
     ) -> None:
         self._socket_timeout = socket_timeout
         self._cookies_path = cookies_path
         self._proxy = proxy
         self._player_clients = player_clients
+        self._request_sleep_seconds = request_sleep_seconds
+        self._download_sleep_min_seconds = download_sleep_min_seconds
+        self._download_sleep_max_seconds = download_sleep_max_seconds
+        self._extractor_retries = extractor_retries
 
     @property
     def has_cookies(self) -> bool:
         return self._cookies_path is not None
 
-    def _build_options(self, **extra: Any) -> dict[str, Any]:
+    @property
+    def uses_soft_mode(self) -> bool:
+        return self._cookies_path is None and self._proxy is None
+
+    def _build_options(
+        self,
+        *,
+        profile: _YoutubeExtractionProfile | None = None,
+        **extra: Any,
+    ) -> dict[str, Any]:
+        youtube_args: dict[str, list[str]] = {
+            "player_client": list(
+                profile.player_clients if profile is not None else self._player_clients
+            ),
+        }
+        if profile is not None and profile.player_skip:
+            youtube_args["player_skip"] = list(profile.player_skip)
+        elif profile is None:
+            youtube_args["player_skip"] = ["webpage"]
+
         options: dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
@@ -84,16 +166,24 @@ class YtDlpClient:
             "socket_timeout": self._socket_timeout,
             "retries": 3,
             "fragment_retries": 3,
+            "extractor_retries": self._extractor_retries,
             "noplaylist": True,
             "js_runtimes": {"node": {}},
             "remote_components": ["ejs:github"],
-            "extractor_args": {
-                "youtube": {
-                    "player_client": list(self._player_clients),
-                    "player_skip": ["webpage"],
-                }
-            },
+            "extractor_args": {"youtube": youtube_args},
         }
+
+        if self.uses_soft_mode:
+            options["http_headers"] = {
+                "User-Agent": _BROWSER_USER_AGENT,
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            if self._request_sleep_seconds > 0:
+                options["sleep_interval_requests"] = self._request_sleep_seconds
+            if self._download_sleep_min_seconds > 0:
+                options["sleep_interval"] = self._download_sleep_min_seconds
+            if self._download_sleep_max_seconds > 0:
+                options["max_sleep_interval"] = self._download_sleep_max_seconds
 
         if self._cookies_path is not None:
             options["cookiefile"] = str(self._cookies_path)
@@ -158,6 +248,51 @@ class YtDlpClient:
         progress_hook: Callable[[dict[str, Any]], None] | None = None,
     ) -> DownloadedVideo:
         output_dir.mkdir(parents=True, exist_ok=True)
+        profiles = build_video_extraction_profiles(self._player_clients)
+        last_error: YtDlpError | None = None
+
+        for index, profile in enumerate(profiles):
+            try:
+                return self._download_video_with_profile(
+                    url,
+                    output_dir=output_dir,
+                    max_filesize_bytes=max_filesize_bytes,
+                    progress_hook=progress_hook,
+                    profile=profile,
+                )
+            except YtDlpError as exc:
+                last_error = exc
+                if not is_retryable_yt_dlp_error(exc) or index == len(profiles) - 1:
+                    raise
+                logger.warning(
+                    "YouTube profile %s failed (%s); trying next profile",
+                    profile.name,
+                    exc,
+                )
+            except Exception as exc:
+                classified = classify_yt_dlp_error(exc)
+                last_error = classified
+                if not is_retryable_yt_dlp_error(classified) or index == len(profiles) - 1:
+                    raise classified from exc
+                logger.warning(
+                    "YouTube profile %s failed (%s); trying next profile",
+                    profile.name,
+                    classified,
+                )
+
+        if last_error is not None:
+            raise last_error
+        raise YtDlpError("YouTube video download failed")
+
+    def _download_video_with_profile(
+        self,
+        url: str,
+        *,
+        output_dir: Path,
+        max_filesize_bytes: int,
+        progress_hook: Callable[[dict[str, Any]], None] | None,
+        profile: _YoutubeExtractionProfile,
+    ) -> DownloadedVideo:
         max_filesize = max_filesize_bytes - (1024 * 1024)
         format_selector = (
             f"best[ext=mp4][vcodec!=none][acodec!=none][filesize<{max_filesize}]/"
@@ -168,6 +303,7 @@ class YtDlpClient:
             "best[vcodec!=none][acodec!=none]"
         )
         options = self._build_options(
+            profile=profile,
             format=format_selector,
             outtmpl=str(output_dir / "%(id)s.%(ext)s"),
             restrictfilenames=True,

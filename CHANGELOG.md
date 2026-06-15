@@ -1,5 +1,7 @@
 # Changelog
 
+[2026-06-15] - Добавлено: мягкий режим YouTube без cookies/proxy — несколько fallback player profiles, sleep/retry настройки и более понятное сообщение при bot-check на Railway.
+
 [2026-06-13] - Добавлено: админ-панель с `/stats`, подтверждаемыми broadcast-постами, сбором пользователей и дневной статистикой запросов.
 
 [2026-06-13] - Добавлено: `KINOGO_PROXY` для Kinogo/player/HLS запросов, когда `api.ortified.ws` блокирует Railway/datacenter IP с `HTTP 410 Gone`.

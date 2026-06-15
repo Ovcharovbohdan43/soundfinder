@@ -151,3 +151,26 @@ def test_load_settings_parses_admin_ids(
     settings = load_settings()
 
     assert settings.admin_ids == (123, 456)
+
+
+def test_load_settings_reads_ytdlp_soft_mode_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("BOT_TOKEN", "123:test")
+    monkeypatch.setenv("IMUSIC_FALLBACK_ENABLED", "true")
+    monkeypatch.delenv("YT_DLP_REQUEST_SLEEP_SECONDS", raising=False)
+    monkeypatch.delenv("YT_DLP_DOWNLOAD_SLEEP_MIN_SECONDS", raising=False)
+    monkeypatch.delenv("YT_DLP_DOWNLOAD_SLEEP_MAX_SECONDS", raising=False)
+    monkeypatch.delenv("YT_DLP_EXTRACTOR_RETRIES", raising=False)
+    monkeypatch.delenv("YT_DLP_COOKIES_B64", raising=False)
+    for index in range(1, 6):
+        monkeypatch.delenv(f"YT_DLP_COOKIES_B64_{index}", raising=False)
+
+    settings = load_settings()
+
+    assert settings.ytdlp_request_sleep_seconds == 1.0
+    assert settings.ytdlp_download_sleep_min_seconds == 1.0
+    assert settings.ytdlp_download_sleep_max_seconds == 3.0
+    assert settings.ytdlp_extractor_retries == 5

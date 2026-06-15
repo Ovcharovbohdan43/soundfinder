@@ -27,6 +27,21 @@ def _get_int(name: str, default: int, *, minimum: int | None = None) -> int:
     return value
 
 
+def _get_float(name: str, default: float, *, minimum: float | None = None) -> float:
+    raw_value = os.getenv(name)
+    if raw_value is None or raw_value == "":
+        return default
+
+    try:
+        value = float(raw_value)
+    except ValueError as exc:
+        raise ConfigError(f"{name} must be a number") from exc
+
+    if minimum is not None and value < minimum:
+        raise ConfigError(f"{name} must be >= {minimum}")
+    return value
+
+
 def _get_bool(name: str, default: bool) -> bool:
     raw_value = os.getenv(name)
     if raw_value is None or raw_value == "":
@@ -148,6 +163,10 @@ class Settings:
     ytdlp_cookies_source: str
     ytdlp_proxy: str | None
     ytdlp_player_clients: tuple[str, ...]
+    ytdlp_request_sleep_seconds: float
+    ytdlp_download_sleep_min_seconds: float
+    ytdlp_download_sleep_max_seconds: float
+    ytdlp_extractor_retries: int
     imusic_fallback_enabled: bool
     imusic_base_url: str
     imusic_timeout: int
@@ -237,6 +256,10 @@ def load_settings() -> Settings:
         ytdlp_cookies_source=cookies_source,
         ytdlp_proxy=os.getenv("YT_DLP_PROXY", "").strip() or None,
         ytdlp_player_clients=_parse_player_clients(os.getenv("YT_DLP_PLAYER_CLIENTS")),
+        ytdlp_request_sleep_seconds=_get_float("YT_DLP_REQUEST_SLEEP_SECONDS", 1.0, minimum=0),
+        ytdlp_download_sleep_min_seconds=_get_float("YT_DLP_DOWNLOAD_SLEEP_MIN_SECONDS", 1.0, minimum=0),
+        ytdlp_download_sleep_max_seconds=_get_float("YT_DLP_DOWNLOAD_SLEEP_MAX_SECONDS", 3.0, minimum=0),
+        ytdlp_extractor_retries=_get_int("YT_DLP_EXTRACTOR_RETRIES", 5, minimum=1),
         imusic_fallback_enabled=imusic_fallback_enabled,
         imusic_base_url=os.getenv("IMUSIC_BASE_URL", "https://two.imusic.fm/").strip(),
         imusic_timeout=_get_int("IMUSIC_TIMEOUT", 8, minimum=3),

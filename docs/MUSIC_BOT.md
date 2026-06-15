@@ -101,6 +101,10 @@ IMUSIC_FALLBACK_ENABLED=true
 IMUSIC_BASE_URL=https://two.imusic.fm/
 IMUSIC_TIMEOUT=8
 YOUTUBE_SEARCH_ENABLED=false
+YT_DLP_REQUEST_SLEEP_SECONDS=1
+YT_DLP_DOWNLOAD_SLEEP_MIN_SECONDS=1
+YT_DLP_DOWNLOAD_SLEEP_MAX_SECONDS=3
+YT_DLP_EXTRACTOR_RETRIES=5
 ```
 
 ## Как тестировать
@@ -125,7 +129,7 @@ Manual e2e:
 
 ## Ограничения
 
-- На Railway YouTube часто блокирует datacenter IP. По умолчанию бот YouTube не трогает; cookies нужны только при `YOUTUBE_SEARCH_ENABLED=true`: см. [YOUTUBE_COOKIES.md](YOUTUBE_COOKIES.md).
+- На Railway YouTube часто блокирует datacenter IP. По умолчанию бот YouTube не трогает; cookies нужны только при `YOUTUBE_SEARCH_ENABLED=true`: см. [YOUTUBE_COOKIES.md](YOUTUBE_COOKIES.md). Для YouTube-видео без cookies/proxy бот пробует несколько extraction profiles и мягкие задержки, но bot-check всё равно возможен.
 - Для polling должен быть запущен ровно один экземпляр бота. `railway.json` ограничивает сервис одной репликой, а `TELEGRAM_SINGLE_INSTANCE_LOCK=true` не дает второму процессу стартовать при общем `/app/data` volume.
 - При `TelegramConflictError` вне этого проекта проверь, что не запущен локальный бот или второй Railway-сервис с тем же `BOT_TOKEN`.
 - Telegram audio upload limit: до 50 MB, в конфиге по умолчанию 49 MB.
@@ -180,5 +184,5 @@ Manual e2e:
 
 ## Версия / дата обновления
 
-Версия: 0.2.0  
-Дата обновления: 2026-06-13
+Версия: 0.2.1  
+Дата обновления: 2026-06-15

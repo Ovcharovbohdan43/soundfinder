@@ -86,6 +86,26 @@ YT_DLP_COOKIES_FILE=/app/data/youtube_cookies.txt
 YT_DLP_PROXY=socks5://user:pass@host:port
 ```
 
+## Режим без cookies и proxy
+
+Если cookies и proxy пока недоступны, бот всё равно попробует скачать YouTube-видео в «мягком режиме»:
+
+- несколько fallback player profiles (`android_vr` → `webpage` → `web_safari/mweb`);
+- browser-like HTTP headers;
+- паузы между запросами и дополнительные extractor retries.
+
+Настройки Railway:
+
+```text
+YT_DLP_REQUEST_SLEEP_SECONDS=1
+YT_DLP_DOWNLOAD_SLEEP_MIN_SECONDS=1
+YT_DLP_DOWNLOAD_SLEEP_MAX_SECONDS=3
+YT_DLP_EXTRACTOR_RETRIES=5
+YT_DLP_PLAYER_CLIENTS=android_vr,tv_embedded,web_safari
+```
+
+Ограничение: если YouTube вернёт `Sign in to confirm you're not a bot` на уровне datacenter IP, мягкий режим не гарантирует успех. В этом случае нужны cookies или `YT_DLP_PROXY`.
+
 ## Как тестировать
 
 1. Redeploy Railway service.
@@ -98,8 +118,9 @@ YT_DLP_PROXY=socks5://user:pass@host:port
 - Cookies устаревают. Их нужно обновлять периодически.
 - Google может ограничить аккаунт при подозрительной активности.
 - Cookies не гарантируют обход блокировки на 100%, но на Railway это обычно обязательный шаг.
+- Без cookies/proxy бот пробует несколько YouTube extraction profiles и мягкие задержки, но datacenter IP всё равно может получить bot-check.
 
 ## Версия / дата обновления
 
-Версия: 0.1.1  
-Дата обновления: 2026-06-09
+Версия: 0.1.2  
+Дата обновления: 2026-06-15

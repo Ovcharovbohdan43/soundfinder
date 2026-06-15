@@ -95,7 +95,8 @@ async def youtube_video_handler(message: Message, services: AppServices, setting
         logger.warning("YouTube blocked video download from this server IP")
         await _stop_status(status_task, stop_status)
         await status_message.edit_text(
-            "YouTube временно не даёт скачать видео с сервера. Нужны YouTube cookies в Railway."
+            "YouTube заблокировал скачивание с сервера Railway даже после нескольких попыток. "
+            "Попробуй другую ссылку позже или добавь YouTube cookies / YT_DLP_PROXY в Railway."
         )
     except VideoDownloadError:
         logger.exception("YouTube video download failed")
