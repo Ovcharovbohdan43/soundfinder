@@ -132,6 +132,7 @@ Manual e2e:
 - На Railway YouTube часто блокирует datacenter IP. По умолчанию бот YouTube не трогает; cookies нужны только при `YOUTUBE_SEARCH_ENABLED=true`: см. [YOUTUBE_COOKIES.md](YOUTUBE_COOKIES.md). Для YouTube-видео без cookies/proxy бот пробует несколько extraction profiles и мягкие задержки, но bot-check всё равно возможен.
 - Для polling должен быть запущен ровно один экземпляр бота. `railway.json` ограничивает сервис одной репликой, а `TELEGRAM_SINGLE_INSTANCE_LOCK=true` не дает второму процессу стартовать при общем `/app/data` volume.
 - При `TelegramConflictError` вне этого проекта проверь, что не запущен локальный бот или второй Railway-сервис с тем же `BOT_TOKEN`.
+- `TelegramUnauthorizedError` в логах почти всегда означает старый/отозванный `BOT_TOKEN` в другом процессе. Текущий Railway-токен может быть валидным, если рядом есть `Update ... is handled`. Останови все старые deployments/локальный бот и обнови токен в BotFather.
 - Telegram audio upload limit: до 50 MB, в конфиге по умолчанию 49 MB.
 - Telegram video upload limit для Bot API также ограничен, поэтому `TELEGRAM_MAX_VIDEO_MB` по умолчанию 49 MB. Видео выше лимита не отправляется без собственного Bot API server/другого транспорта.
 - Для YouTube-видео используется отдельная очередь: `MAX_CONCURRENT_VIDEO_DOWNLOADS` и `MAX_ACTIVE_VIDEO_DOWNLOADS_PER_USER`.

@@ -8,6 +8,7 @@ from pathlib import Path
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramUnauthorizedError
 
 from src.bot.handlers import admin, movie, search, start, youtube_video
 from src.bot.middleware import ActivityMiddleware
@@ -38,6 +39,20 @@ def setup_logging(settings: Settings) -> None:
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
         stream=sys.stdout,
     )
+
+
+async def validate_bot_token(bot: Bot) -> None:
+    logger = logging.getLogger(__name__)
+    try:
+        me = await bot.get_me()
+    except TelegramUnauthorizedError as exc:
+        logger.error(
+            "BOT_TOKEN is invalid or revoked. Update Railway BOT_TOKEN from BotFather "
+            "and stop any other local/Railway process using an old token."
+        )
+        raise SystemExit(3) from exc
+
+    logger.info("Telegram bot authorized as @%s (id=%s)", me.username, me.id)
 
 
 async def build_services(settings: Settings) -> tuple[AppServices, Path | None]:
@@ -156,6 +171,7 @@ async def main() -> None:
         token=settings.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
+    await validate_bot_token(bot)
     dispatcher = Dispatcher(services=services, settings=settings)
     dispatcher.message.middleware(ActivityMiddleware())
     dispatcher.callback_query.middleware(ActivityMiddleware())
